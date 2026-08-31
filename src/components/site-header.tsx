@@ -1,0 +1,47 @@
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+
+const nav = [
+  { href: "/home", label: "홈" },
+  { href: "/quiz", label: "취향 진단" },
+  { href: "/scan", label: "병 스캔" },
+  { href: "/journal", label: "테이스팅 노트" },
+  { href: "/map", label: "증류소 지도" },
+  { href: "/glossary", label: "용어 사전" },
+];
+
+export function SiteHeader({ email }: { email: string | null }) {
+  return (
+    <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur">
+      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4">
+        <Link href="/home" className="shrink-0 font-bold">
+          🥃 FirstDram
+        </Link>
+        <nav className="hidden gap-1 sm:flex">
+          {nav.map((item) => (
+            <Button
+              key={item.href}
+              variant="ghost"
+              size="sm"
+              render={<Link href={item.href} />}
+            >
+              {item.label}
+            </Button>
+          ))}
+        </nav>
+        <div className="flex items-center gap-2">
+          {email && (
+            <span className="hidden max-w-40 truncate text-xs text-muted-foreground md:inline">
+              {email}
+            </span>
+          )}
+          <form action="/auth/signout" method="post">
+            <Button type="submit" variant="outline" size="sm">
+              로그아웃
+            </Button>
+          </form>
+        </div>
+      </div>
+    </header>
+  );
+}
