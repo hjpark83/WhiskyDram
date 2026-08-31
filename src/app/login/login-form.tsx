@@ -7,6 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { signIn, signInWithGoogle, signUp, type AuthState } from "./actions";
 
+// Google provider is not yet configured in Supabase — hide the button until it is.
+// Flip to true after enabling Providers > Google in the Supabase dashboard.
+const GOOGLE_LOGIN_ENABLED = false;
+
 function CredentialsForm({
   action,
   submitLabel,
@@ -77,21 +81,27 @@ export function LoginForm({ next }: { next: string }) {
         </TabsContent>
       </Tabs>
 
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-2 text-muted-foreground">또는</span>
-        </div>
-      </div>
+      {GOOGLE_LOGIN_ENABLED && (
+        <>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                또는
+              </span>
+            </div>
+          </div>
 
-      <form action={signInWithGoogle}>
-        <input type="hidden" name="next" value={next} />
-        <Button type="submit" variant="outline" className="w-full">
-          Google로 계속하기
-        </Button>
-      </form>
+          <form action={signInWithGoogle}>
+            <input type="hidden" name="next" value={next} />
+            <Button type="submit" variant="outline" className="w-full">
+              Google로 계속하기
+            </Button>
+          </form>
+        </>
+      )}
     </div>
   );
 }
