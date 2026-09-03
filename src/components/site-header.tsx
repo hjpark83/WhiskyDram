@@ -8,6 +8,7 @@ const nav = [
   { href: "/recommend", label: "내 추천" },
   { href: "/whisky", label: "위스키 탐색" },
   { href: "/journal", label: "테이스팅 노트" },
+  { href: "/map", label: "증류소 지도" },
 ];
 
 export function SiteHeader({ email }: { email: string | null }) {

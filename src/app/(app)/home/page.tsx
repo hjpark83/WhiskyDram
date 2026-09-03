@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Camera, Compass, NotebookPen, Search, Sparkles } from "lucide-react";
+import { Camera, Compass, Globe2, NotebookPen, Search, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,6 +24,13 @@ const actions = [
     icon: Search,
     title: "위스키 탐색",
     body: `국내에서 구할 수 있는 ${WHISKIES.length}병을 쉬운 말로. 내 취향과 맞는 정도도 함께.`,
+    ready: true,
+  },
+  {
+    href: "/map",
+    icon: Globe2,
+    title: "증류소 지도",
+    body: "지구본을 돌려 증류소를 찾고, 그곳에서 만드는 병을 살펴보세요.",
     ready: true,
   },
   {
