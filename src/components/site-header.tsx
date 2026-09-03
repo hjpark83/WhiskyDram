@@ -1,13 +1,12 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+// 아직 안 만든 페이지는 넣지 않아요 (데모에서 404 방지). 만들 때마다 추가.
 const nav = [
   { href: "/home", label: "홈" },
   { href: "/quiz", label: "취향 진단" },
-  { href: "/scan", label: "병 스캔" },
-  { href: "/journal", label: "테이스팅 노트" },
-  { href: "/map", label: "증류소 지도" },
-  { href: "/glossary", label: "용어 사전" },
+  { href: "/recommend", label: "내 추천" },
+  { href: "/whisky", label: "위스키 탐색" },
 ];
 
 export function SiteHeader({ email }: { email: string | null }) {
@@ -17,7 +16,7 @@ export function SiteHeader({ email }: { email: string | null }) {
         <Link href="/home" className="shrink-0 font-bold">
           🥃 FirstDram
         </Link>
-        <nav className="hidden gap-1 sm:flex">
+        <nav className="flex gap-1 overflow-x-auto">
           {nav.map((item) => (
             <Button
               key={item.href}
