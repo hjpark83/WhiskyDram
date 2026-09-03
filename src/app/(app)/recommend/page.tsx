@@ -36,6 +36,7 @@ export default async function RecommendPage() {
       .from("recommendations")
       .select("id, source, payload, created_at")
       .eq("user_id", user.id)
+      .in("source", ["quiz", "review"])
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),

@@ -38,7 +38,7 @@ const actions = [
     icon: Camera,
     title: "병 사진 찍기",
     body: "마트나 바에서 보이는 그 병, 지금 내 취향에 맞을까요?",
-    ready: false,
+    ready: true,
   },
   {
     href: "/journal",
@@ -66,6 +66,7 @@ export default async function HomePage() {
       .from("recommendations")
       .select("payload, whisky_ids, created_at")
       .eq("user_id", user.id)
+      .in("source", ["quiz", "review"])
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
