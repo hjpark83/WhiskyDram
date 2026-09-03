@@ -53,18 +53,18 @@ export async function GET(request: NextRequest) {
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          background: "linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)",
+          background: "radial-gradient(ellipse 70% 60% at 50% 0%, #3a2a1c 0%, #1a120c 70%)",
           fontFamily: font ? "NotoSansKR" : "sans-serif",
-          color: "#1f2937",
+          color: "#f3e7d3",
           padding: 56,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 26, color: "#b45309" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 26, color: "#d9a441" }}>
           <span>🥃</span>
           <span style={{ fontWeight: 700 }}>FirstDram</span>
-          <span style={{ color: "#78716c" }}>· AI 위스키 취향 진단</span>
+          <span style={{ color: "#b8a58d" }}>· AI 위스키 취향 진단</span>
         </div>
-        <div style={{ display: "flex", fontSize: 72, fontWeight: 700, marginTop: 24, color: "#111827" }}>
+        <div style={{ display: "flex", fontSize: 72, fontWeight: 700, marginTop: 24, color: "#f3e7d3" }}>
           나는 “{title}”
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 20 }}>
@@ -74,8 +74,9 @@ export async function GET(request: NextRequest) {
               style={{
                 display: "flex",
                 fontSize: 24,
-                background: "#fde68a",
-                color: "#78350f",
+                background: "rgba(217,164,65,0.18)",
+                color: "#f0c96a",
+                border: "1px solid rgba(217,164,65,0.4)",
                 borderRadius: 999,
                 padding: "8px 18px",
               }}
@@ -92,8 +93,8 @@ export async function GET(request: NextRequest) {
                 const pct = (Math.abs(v) / 2) * 50;
                 return (
                   <div key={a} style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 20 }}>
-                    <div style={{ display: "flex", width: 110, color: "#57534e" }}>{axisLabels[i]}</div>
-                    <div style={{ display: "flex", position: "relative", flex: 1, height: 14, background: "#e7e5e4", borderRadius: 999 }}>
+                    <div style={{ display: "flex", width: 110, color: "#b8a58d" }}>{axisLabels[i]}</div>
+                    <div style={{ display: "flex", position: "relative", flex: 1, height: 14, background: "#3a2a1c", borderRadius: 999 }}>
                       <div
                         style={{
                           position: "absolute",
@@ -102,7 +103,7 @@ export async function GET(request: NextRequest) {
                           borderRadius: 999,
                           width: `${pct}%`,
                           left: v >= 0 ? "50%" : `${50 - pct}%`,
-                          background: v >= 0 ? "#d97706" : "#94a3b8",
+                          background: v >= 0 ? "#d9a441" : "#8a7a66",
                         }}
                       />
                     </div>
@@ -111,7 +112,7 @@ export async function GET(request: NextRequest) {
               })}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1 }}>
-            <div style={{ display: "flex", fontSize: 22, color: "#57534e" }}>추천받은 첫 위스키</div>
+            <div style={{ display: "flex", fontSize: 22, color: "#b8a58d" }}>추천받은 첫 위스키</div>
             {whiskies.map((w) => (
               <div
                 key={w.id}
@@ -119,10 +120,11 @@ export async function GET(request: NextRequest) {
                   display: "flex",
                   fontSize: 26,
                   fontWeight: 700,
-                  background: "white",
-                  borderRadius: 16,
+                  background: "#24190f",
+                  color: "#f3e7d3",
+                  borderRadius: 14,
                   padding: "10px 18px",
-                  border: "2px solid #fcd34d",
+                  border: "1px solid rgba(217,164,65,0.5)",
                 }}
               >
                 {w.nameKo}
@@ -130,7 +132,7 @@ export async function GET(request: NextRequest) {
             ))}
           </div>
         </div>
-        <div style={{ display: "flex", justifyContent: "flex-end", fontSize: 22, color: "#78716c", marginTop: 16 }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", fontSize: 22, color: "#b8a58d", marginTop: 16 }}>
           커피·디저트 취향만 답하면 1분 진단
         </div>
       </div>

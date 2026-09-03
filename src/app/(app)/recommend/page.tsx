@@ -70,9 +70,9 @@ export default async function RecommendPage() {
   return (
     <div className="space-y-10">
       {basis && basisWhisky && (
-        <section className="rounded-xl border border-amber-600/40 bg-amber-50/60 p-5">
+        <section className="rounded-xl border border-amber-400/40 bg-amber-500/10 p-5">
           <div className="flex items-start gap-3">
-            <NotebookPen className="mt-0.5 size-5 shrink-0 text-amber-700" aria-hidden />
+            <NotebookPen className="mt-0.5 size-5 shrink-0 text-amber-400" aria-hidden />
             <div className="space-y-2">
               <p className="font-semibold">
                 <Link href={`/whisky/${basisWhisky.id}`} className="underline">
@@ -89,7 +89,7 @@ export default async function RecommendPage() {
                       key={axis}
                       className={
                         "rounded-full px-2 py-0.5 text-xs font-medium " +
-                        (d > 0 ? "bg-amber-600 text-white" : "bg-slate-200 text-slate-800")
+                        (d > 0 ? "bg-amber-500 text-amber-950" : "bg-stone-600 text-stone-100")
                       }
                     >
                       {AXIS_LABELS_KO[axis]} {d > 0 ? `+${d}` : d}
@@ -112,7 +112,7 @@ export default async function RecommendPage() {
             <span className="text-xs text-muted-foreground">{createdAt} 진단</span>
           </div>
           <h1 className="text-3xl font-bold">
-            당신은 <span className="text-amber-700">{payload.tasteTitle}</span>
+            당신은 <span className="text-amber-400">{payload.tasteTitle}</span>
           </h1>
           <p className="leading-relaxed text-muted-foreground"><GlossaryText text={payload.tasteSummary} /></p>
           <div className="flex flex-wrap gap-2 pt-1">
@@ -161,7 +161,7 @@ export default async function RecommendPage() {
                 <Card className="h-full">
                   <CardContent className="flex h-full flex-col gap-4 p-5">
                     <div className="space-y-1">
-                      <p className="text-xs font-medium text-amber-700">{PICK_LABELS[i]}</p>
+                      <p className="text-xs font-medium text-amber-400">{PICK_LABELS[i]}</p>
                       <div className="flex items-start justify-between gap-2">
                         <h3 className="text-lg font-bold leading-snug">
                           <Link href={`/whisky/${w.id}`} className="hover:underline">
@@ -196,11 +196,11 @@ export default async function RecommendPage() {
 
                     <ul className="space-y-2 text-sm">
                       <li className="flex gap-2">
-                        <GlassWater className="mt-0.5 size-4 shrink-0 text-amber-700" aria-hidden />
+                        <GlassWater className="mt-0.5 size-4 shrink-0 text-amber-400" aria-hidden />
                         <span>{pick.howToDrink}</span>
                       </li>
                       <li className="flex gap-2">
-                        <Utensils className="mt-0.5 size-4 shrink-0 text-amber-700" aria-hidden />
+                        <Utensils className="mt-0.5 size-4 shrink-0 text-amber-400" aria-hidden />
                         <span>{pick.pairing}</span>
                       </li>
                       {pick.caution && (
@@ -227,7 +227,7 @@ export default async function RecommendPage() {
         </ol>
       </section>
 
-      <section className="rounded-xl border bg-amber-50/60 p-5">
+      <section className="rounded-xl border bg-amber-500/10 p-5">
         <h2 className="font-semibold">다음 한 걸음</h2>
         <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{payload.nextStep}</p>
       </section>

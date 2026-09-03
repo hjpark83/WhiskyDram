@@ -190,7 +190,7 @@ export function WhiskyExplorer({
               <button
                 type="button"
                 onClick={reset}
-                className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-muted-foreground hover:border-amber-600/60"
+                className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-muted-foreground hover:border-amber-400/60"
               >
                 <X className="size-3" aria-hidden />
                 필터 초기화
@@ -291,8 +291,8 @@ function Chip({
       className={cn(
         "rounded-full border px-3 py-1 text-sm transition-colors",
         active
-          ? "border-amber-600 bg-amber-600 text-white"
-          : "border-border bg-card text-foreground hover:border-amber-600/60",
+          ? "border-amber-400 bg-amber-500 text-amber-950"
+          : "border-border bg-card text-foreground hover:border-amber-400/60",
       )}
     >
       {children}

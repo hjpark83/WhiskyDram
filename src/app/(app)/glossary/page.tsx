@@ -18,7 +18,7 @@ export default function GlossaryPage() {
 
       <nav className="flex flex-wrap gap-1.5 text-sm">
         {CATEGORIES.map((c) => (
-          <a key={c} href={`#cat-${c}`} className="rounded-full border px-3 py-1 hover:border-amber-600/60">
+          <a key={c} href={`#cat-${c}`} className="rounded-full border px-3 py-1 hover:border-amber-400/60">
             {c}
           </a>
         ))}
@@ -40,7 +40,7 @@ export default function GlossaryPage() {
                         </span>
                       )}
                     </p>
-                    <p className="text-sm font-medium text-amber-900">{e.short}</p>
+                    <p className="text-sm font-medium text-amber-200">{e.short}</p>
                     <p className="text-sm leading-relaxed text-muted-foreground">{e.long}</p>
                   </CardContent>
                 </Card>

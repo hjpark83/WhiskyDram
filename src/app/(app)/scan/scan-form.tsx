@@ -82,7 +82,7 @@ export function ScanForm({ personalized }: { personalized: boolean }) {
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="flex aspect-[3/4] w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border-2 border-dashed bg-muted/30 text-muted-foreground transition-colors hover:border-amber-600/60"
+          className="flex aspect-[3/4] w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border-2 border-dashed bg-muted/30 text-muted-foreground transition-colors hover:border-amber-400/60"
         >
           {preview ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -114,14 +114,14 @@ export function ScanForm({ personalized }: { personalized: boolean }) {
       <div>
         {pending && (
           <div className="flex h-full min-h-[240px] flex-col items-center justify-center gap-3 text-center">
-            <Sparkles className="size-8 animate-pulse text-amber-600" aria-hidden />
+            <Sparkles className="size-8 animate-pulse text-amber-400" aria-hidden />
             <p className="font-semibold">라벨을 읽고 사전에서 찾는 중…</p>
             <p className="text-sm text-muted-foreground">보통 5~10초 걸려요.</p>
           </div>
         )}
 
         {!pending && outcome?.ok && outcome.whisky && (
-          <Card className="border-amber-600/40">
+          <Card className="border-amber-400/40">
             <CardContent className="space-y-4 p-5">
               <div className="flex items-start justify-between gap-2">
                 <div>
@@ -143,21 +143,21 @@ export function ScanForm({ personalized }: { personalized: boolean }) {
               <div className="flex flex-wrap gap-1.5">
                 <Badge variant="outline">{outcome.whisky.price}</Badge>
                 {outcome.whisky.styles.map((t) => (
-                  <Badge key={t} className="bg-amber-100 text-amber-900">
+                  <Badge key={t} className="bg-amber-500/15 text-amber-200">
                     {STYLE_EMOJI[t]} {STYLE_LABELS_KO[t]}
                   </Badge>
                 ))}
               </div>
 
               {outcome.result.verdict && (
-                <div className="space-y-2 rounded-xl bg-amber-50/70 p-4">
-                  <p className="font-semibold text-amber-900">
+                <div className="space-y-2 rounded-xl bg-amber-500/10 p-4">
+                  <p className="font-semibold text-amber-200">
                     {personalized ? "내 취향 판정: " : ""}
                     {outcome.result.verdict.headline}
                   </p>
                   <p className="text-sm leading-relaxed">{outcome.result.verdict.reason}</p>
                   <p className="flex gap-2 text-sm">
-                    <GlassWater className="mt-0.5 size-4 shrink-0 text-amber-700" aria-hidden />
+                    <GlassWater className="mt-0.5 size-4 shrink-0 text-amber-400" aria-hidden />
                     {outcome.result.verdict.howToDrink}
                   </p>
                   {outcome.result.verdict.caution && (
@@ -186,7 +186,7 @@ export function ScanForm({ personalized }: { personalized: boolean }) {
                       <li key={a.id}>
                         <Link
                           href={`/whisky/${a.id}`}
-                          className="rounded-full border px-3 py-1 text-xs hover:border-amber-600/60"
+                          className="rounded-full border px-3 py-1 text-xs hover:border-amber-400/60"
                         >
                           {a.nameKo}
                         </Link>

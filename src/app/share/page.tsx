@@ -29,9 +29,9 @@ export default async function SharePage({ searchParams }: PageProps<"/share">) {
   const whiskies = data ? getWhiskies(data.whiskyIds) : [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-background">
+    <div className="min-h-screen bg-gradient-to-b from-amber-500/10 to-background">
       <header className="mx-auto flex max-w-2xl items-center justify-between px-4 py-4">
-        <Link href="/" className="font-bold">
+        <Link href="/" className="brand font-bold text-amber-300">
           🥃 FirstDram
         </Link>
         <Button size="sm" render={<Link href="/quiz" />}>
@@ -46,8 +46,8 @@ export default async function SharePage({ searchParams }: PageProps<"/share">) {
           </p>
         ) : (
           <>
-            <Card className="overflow-hidden border-amber-600/40">
-              <div className="bg-amber-600 px-6 py-5 text-white">
+            <Card className="gap-0 overflow-hidden border-amber-400/40 py-0">
+              <div className="bg-amber-500 px-6 py-5 text-amber-950">
                 <p className="flex items-center gap-1.5 text-xs opacity-90">
                   <Sparkles className="size-3.5" /> AI 위스키 취향 진단 결과
                 </p>
@@ -56,7 +56,7 @@ export default async function SharePage({ searchParams }: PageProps<"/share">) {
               <CardContent className="space-y-5 p-6">
                 <ul className="flex flex-wrap gap-1.5">
                   {describeProfile(data.profile).map((line) => (
-                    <li key={line} className="rounded-full bg-amber-100 px-3 py-1 text-xs text-amber-900">
+                    <li key={line} className="rounded-full bg-amber-500/15 px-3 py-1 text-xs text-amber-200">
                       {line}
                     </li>
                   ))}

@@ -115,21 +115,21 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
                       </div>
                       <p className="text-sm leading-relaxed">“{n.review}”</p>
                       {(a.summary || chips.length > 0) && (
-                        <div className="space-y-2 rounded-lg bg-amber-50/70 p-3 text-sm">
+                        <div className="space-y-2 rounded-lg bg-amber-500/10 p-3 text-sm">
                           {a.summary && (
-                            <p className="font-medium text-amber-900">AI 분석: {a.summary}</p>
+                            <p className="font-medium text-amber-200">AI 분석: {a.summary}</p>
                           )}
                           {a.explanation && (
                             <p className="text-muted-foreground">{a.explanation}</p>
                           )}
                           <div className="flex flex-wrap gap-1.5">
                             {(a.liked ?? []).map((t) => (
-                              <Badge key={`l-${t}`} className="bg-emerald-100 text-emerald-900">
+                              <Badge key={`l-${t}`} className="bg-emerald-500/15 text-emerald-200">
                                 👍 {t}
                               </Badge>
                             ))}
                             {(a.disliked ?? []).map((t) => (
-                              <Badge key={`d-${t}`} className="bg-slate-200 text-slate-800">
+                              <Badge key={`d-${t}`} className="bg-stone-600 text-stone-100">
                                 👎 {t}
                               </Badge>
                             ))}

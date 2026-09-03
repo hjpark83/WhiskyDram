@@ -17,9 +17,9 @@ export function MatchBadge({ percent }: { percent: number | null }) {
   if (percent === null) return null;
   const tone =
     percent >= 75
-      ? "bg-amber-600 text-white"
+      ? "bg-amber-500 text-amber-950"
       : percent >= 55
-        ? "bg-amber-100 text-amber-900"
+        ? "bg-amber-500/15 text-amber-200"
         : "bg-muted text-muted-foreground";
   return (
     <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums", tone)}>
@@ -39,7 +39,7 @@ export function WhiskyCard({
 }) {
   return (
     <Link href={`/whisky/${whisky.id}`} className={cn("group block", className)}>
-      <Card className="h-full transition-colors group-hover:border-amber-600/60">
+      <Card className="h-full transition-colors group-hover:border-amber-400/60">
         <CardContent className="flex h-full flex-col gap-3 p-5">
           <div className="flex items-start justify-between gap-2">
             <div className="flex min-w-0 items-center gap-2">
@@ -56,7 +56,7 @@ export function WhiskyCard({
             <Badge variant="outline">{formatOrigin(whisky)}</Badge>
             <Badge variant="outline">{DIFFICULTY_LABELS_KO[whisky.difficulty]}</Badge>
             {whisky.styles.map((tag) => (
-              <Badge key={tag} className="bg-amber-100 text-amber-900">
+              <Badge key={tag} className="bg-amber-500/15 text-amber-200">
                 {STYLE_EMOJI[tag]} {STYLE_LABELS_KO[tag]}
               </Badge>
             ))}

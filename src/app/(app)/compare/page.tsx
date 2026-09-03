@@ -84,7 +84,7 @@ function Comparison({ a, b, profile }: { a: Whisky; b: Whisky; profile: TastePro
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2">
         {[a, b].map((w, i) => (
-          <Card key={w.id} className={i === 0 ? "border-amber-600/50" : "border-sky-600/50"}>
+          <Card key={w.id} className={i === 0 ? "border-amber-400/50" : "border-sky-400/50"}>
             <CardContent className="space-y-3 p-5">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-3">
@@ -104,7 +104,7 @@ function Comparison({ a, b, profile }: { a: Whisky; b: Whisky; profile: TastePro
                 <Badge variant="secondary">{TYPE_LABELS_KO[w.type]}</Badge>
                 <Badge variant="outline">{formatOrigin(w)}</Badge>
                 {w.styles.map((t) => (
-                  <Badge key={t} className="bg-amber-100 text-amber-900">
+                  <Badge key={t} className="bg-amber-500/15 text-amber-200">
                     {STYLE_EMOJI[t]} {STYLE_LABELS_KO[t]}
                   </Badge>
                 ))}
@@ -130,10 +130,10 @@ function Comparison({ a, b, profile }: { a: Whisky; b: Whisky; profile: TastePro
             <h3 className="font-semibold">향미 비교</h3>
             <div className="flex gap-3 text-xs">
               <span className="inline-flex items-center gap-1">
-                <span className="size-2.5 rounded-full bg-amber-600" /> {a.nameKo}
+                <span className="size-2.5 rounded-full bg-amber-500" /> {a.nameKo}
               </span>
               <span className="inline-flex items-center gap-1">
-                <span className="size-2.5 rounded-full bg-sky-600" /> {b.nameKo}
+                <span className="size-2.5 rounded-full bg-sky-400" /> {b.nameKo}
               </span>
             </div>
           </div>
@@ -147,10 +147,10 @@ function Comparison({ a, b, profile }: { a: Whisky; b: Whisky; profile: TastePro
                   <span className="text-muted-foreground">{AXIS_LABELS_KO[axis]}</span>
                   <div className="space-y-1">
                     <div className="h-2 rounded-full bg-muted">
-                      <div className="h-full rounded-full bg-amber-600" style={{ width: `${(va / 5) * 100}%` }} />
+                      <div className="h-full rounded-full bg-amber-500" style={{ width: `${(va / 5) * 100}%` }} />
                     </div>
                     <div className="h-2 rounded-full bg-muted">
-                      <div className="h-full rounded-full bg-sky-600" style={{ width: `${(vb / 5) * 100}%` }} />
+                      <div className="h-full rounded-full bg-sky-400" style={{ width: `${(vb / 5) * 100}%` }} />
                     </div>
                   </div>
                   <span className="text-right text-xs text-muted-foreground">
@@ -168,9 +168,9 @@ function Comparison({ a, b, profile }: { a: Whisky; b: Whisky; profile: TastePro
           <Card key={w.id}>
             <CardContent className="space-y-2 p-5 text-sm">
               <p className="font-semibold">{w.nameKo}</p>
-              <p><span className="text-amber-700">향</span> {w.notes.nose}</p>
-              <p><span className="text-amber-700">맛</span> {w.notes.palate}</p>
-              <p><span className="text-amber-700">여운</span> {w.notes.finish}</p>
+              <p><span className="text-amber-400">향</span> {w.notes.nose}</p>
+              <p><span className="text-amber-400">맛</span> {w.notes.palate}</p>
+              <p><span className="text-amber-400">여운</span> {w.notes.finish}</p>
               <p className="text-muted-foreground">{w.beginnerTip}</p>
             </CardContent>
           </Card>

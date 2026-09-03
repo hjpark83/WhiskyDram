@@ -37,9 +37,9 @@ export function SiteHeader({ email }: { email: string | null }) {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur">
+      <header className="sticky top-0 z-40 bg-background/85 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4">
-          <Link href="/home" className="shrink-0 font-bold">
+          <Link href="/home" className="brand shrink-0 text-lg font-bold text-amber-300">
             🥃 FirstDram
           </Link>
           <nav className="hidden gap-0.5 overflow-x-auto sm:flex">
@@ -48,7 +48,7 @@ export function SiteHeader({ email }: { email: string | null }) {
                 key={item.href}
                 variant="ghost"
                 size="sm"
-                className={cn(isActive(item.href) && "bg-amber-50 text-amber-800")}
+                className={cn(isActive(item.href) && "bg-amber-500/10 text-amber-300")}
                 render={<Link href={item.href} />}
               >
                 {item.label}
@@ -68,6 +68,7 @@ export function SiteHeader({ email }: { email: string | null }) {
             </form>
           </div>
         </div>
+        <div className="brass-line" />
       </header>
 
       {/* 모바일 하단 탭바 */}
@@ -87,10 +88,10 @@ export function SiteHeader({ email }: { email: string | null }) {
                   href={href}
                   className={cn(
                     "flex flex-col items-center gap-0.5 py-2 text-[11px]",
-                    active ? "text-amber-700" : "text-muted-foreground",
+                    active ? "text-amber-400" : "text-muted-foreground",
                   )}
                 >
-                  <Icon className={cn("size-5", active && "fill-amber-100")} aria-hidden />
+                  <Icon className={cn("size-5", active && "fill-amber-500/30")} aria-hidden />
                   {item.label.replace("AI ", "").replace("위스키 ", "")}
                 </Link>
               </li>

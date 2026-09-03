@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Noto_Sans_KR, Geist_Mono } from "next/font/google";
+import { Noto_Sans_KR, Noto_Serif_KR, Playfair_Display, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -7,6 +7,19 @@ const notoSansKr = Noto_Sans_KR({
   variable: "--font-sans",
   subsets: ["latin"],
   weight: ["400", "500", "700"],
+});
+
+const notoSerifKr = Noto_Serif_KR({
+  variable: "--font-serif",
+  subsets: ["latin"],
+  weight: ["600", "700"],
+});
+
+const playfair = Playfair_Display({
+  variable: "--font-brand",
+  subsets: ["latin"],
+  weight: ["600", "700"],
+  style: ["normal", "italic"],
 });
 
 const geistMono = Geist_Mono({
@@ -27,7 +40,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="ko"
-      className={`${notoSansKr.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${notoSansKr.variable} ${notoSerifKr.variable} ${playfair.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         {children}

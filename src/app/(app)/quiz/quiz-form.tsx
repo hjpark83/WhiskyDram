@@ -59,7 +59,7 @@ export function QuizForm({ initialAnswers }: { initialAnswers?: QuizAnswers }) {
   if (pending) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-center">
-        <Sparkles className="size-8 animate-pulse text-amber-600" aria-hidden />
+        <Sparkles className="size-8 animate-pulse text-amber-400" aria-hidden />
         <p className="text-lg font-semibold">{LOADING_LINES[loadingIdx]}</p>
         <p className="text-sm text-muted-foreground">보통 10초 안에 끝나요.</p>
       </div>
@@ -94,9 +94,9 @@ export function QuizForm({ initialAnswers }: { initialAnswers?: QuizAnswers }) {
                 aria-pressed={active}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-xl border p-4 text-left transition-all",
-                  "hover:border-amber-600/60 hover:bg-amber-50/50 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                  "hover:border-amber-400/60 hover:bg-amber-500/10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                   active
-                    ? "border-amber-600 bg-amber-50 shadow-sm"
+                    ? "border-amber-400 bg-amber-500/10 shadow-sm"
                     : "border-border bg-card",
                 )}
               >

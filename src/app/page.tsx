@@ -65,7 +65,7 @@ export default function LandingPage() {
   return (
     <main className="flex-1">
       <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-        <span className="text-xl font-bold">🥃 FirstDram</span>
+        <span className="brand text-xl font-bold text-amber-300">🥃 FirstDram</span>
         <Button variant="ghost" render={<Link href="/login" />}>
           로그인
         </Button>
@@ -74,7 +74,7 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="mx-auto grid max-w-5xl items-center gap-10 px-6 pb-16 pt-10 lg:grid-cols-[1.1fr_1fr] lg:pt-16">
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-          <p className="mb-4 text-sm font-medium text-amber-700">Your first dram, chosen for you.</p>
+          <p className="mb-4 text-sm font-medium text-amber-400">Your first dram, chosen for you.</p>
           <h1 className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
             위스키, 뭐부터
             <br />
@@ -105,8 +105,8 @@ export default function LandingPage() {
         </div>
 
         {/* 예시 결과 카드 */}
-        <Card className="animate-in fade-in slide-in-from-bottom-6 border-amber-600/40 shadow-lg duration-700 delay-150">
-          <div className="rounded-t-xl bg-amber-600 px-5 py-4 text-white">
+        <Card className="animate-in fade-in slide-in-from-bottom-6 gap-0 overflow-hidden border-amber-400/40 py-0 shadow-lg glow-amber duration-700 delay-150">
+          <div className="rounded-t-xl bg-amber-500 px-5 py-4 text-amber-950">
             <p className="flex items-center gap-1.5 text-xs opacity-90">
               <Sparkles className="size-3.5" /> 진단 결과 예시
             </p>
@@ -135,11 +135,11 @@ export default function LandingPage() {
       </section>
 
       {/* How it works */}
-      <section className="border-y bg-amber-50/50">
+      <section className="border-y bg-amber-500/10">
         <div className="mx-auto grid max-w-5xl gap-6 px-6 py-14 md:grid-cols-3">
           {steps.map((s) => (
             <div key={s.n} className="flex gap-4">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-amber-600 font-bold text-white">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-amber-500 font-bold text-amber-950">
                 {s.n}
               </span>
               <div>
@@ -156,9 +156,9 @@ export default function LandingPage() {
         <h2 className="mb-6 text-2xl font-bold">찾고, 묻고, 마시고, 기록하고</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {features.map(({ icon: Icon, title, body }) => (
-            <Card key={title} className="transition-transform hover:-translate-y-0.5 hover:border-amber-600/50">
+            <Card key={title} className="transition-transform hover:-translate-y-0.5 hover:border-amber-400/50">
               <CardContent className="space-y-3 p-6">
-                <Icon className="size-6 text-amber-700" aria-hidden />
+                <Icon className="size-6 text-amber-400" aria-hidden />
                 <h3 className="font-semibold">{title}</h3>
                 <p className="text-sm leading-relaxed text-muted-foreground">{body}</p>
               </CardContent>

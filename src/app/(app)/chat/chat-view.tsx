@@ -129,7 +129,7 @@ export function ChatView({ personalized, greeting }: { personalized: boolean; gr
             <div
               className={cn(
                 "flex size-8 shrink-0 items-center justify-center rounded-full",
-                m.role === "user" ? "bg-muted" : "bg-amber-600 text-white",
+                m.role === "user" ? "bg-muted" : "bg-amber-500 text-amber-950",
               )}
             >
               {m.role === "user" ? <User className="size-4" /> : <Bot className="size-4" />}
@@ -139,13 +139,13 @@ export function ChatView({ personalized, greeting }: { personalized: boolean; gr
                 <div
                   className={cn(
                     "inline-block whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-left text-sm leading-relaxed",
-                    m.role === "user" ? "bg-amber-600 text-white" : "bg-muted",
+                    m.role === "user" ? "bg-amber-500 text-amber-950" : "bg-muted",
                   )}
                 >
                   {m.content && renderInline(m.content)}
                   {m.status && (
                     <span className="flex items-center gap-1.5 text-muted-foreground">
-                      <Sparkles className="size-3.5 animate-pulse text-amber-600" aria-hidden />
+                      <Sparkles className="size-3.5 animate-pulse text-amber-400" aria-hidden />
                       {m.status}
                     </span>
                   )}
@@ -158,7 +158,7 @@ export function ChatView({ personalized, greeting }: { personalized: boolean; gr
                     <li key={w.id}>
                       <Link
                         href={`/whisky/${w.id}`}
-                        className="block rounded-xl border bg-background px-3 py-2 text-left transition-colors hover:border-amber-600/60"
+                        className="block rounded-xl border bg-background px-3 py-2 text-left transition-colors hover:border-amber-400/60"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
@@ -170,7 +170,7 @@ export function ChatView({ personalized, greeting }: { personalized: boolean; gr
                           <MatchBadge percent={w.percent} />
                         </div>
                         {w.styles.length > 0 && (
-                          <p className="mt-1 text-xs text-amber-800">
+                          <p className="mt-1 text-xs text-amber-300">
                             {w.styles.map((t) => `${STYLE_EMOJI[t]} ${STYLE_LABELS_KO[t]}`).join("  ")}
                           </p>
                         )}
@@ -193,7 +193,7 @@ export function ChatView({ personalized, greeting }: { personalized: boolean; gr
                 key={s}
                 type="button"
                 onClick={() => send(s)}
-                className="rounded-full border px-3 py-1 text-xs hover:border-amber-600/60"
+                className="rounded-full border px-3 py-1 text-xs hover:border-amber-400/60"
               >
                 {s}
               </button>

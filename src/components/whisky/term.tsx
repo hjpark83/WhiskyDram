@@ -33,7 +33,7 @@ export function Term({ entry, children, className }: { entry: GlossaryEntry; chi
         aria-controls={id}
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "cursor-help rounded-sm underline decoration-amber-600/60 decoration-dotted underline-offset-4 hover:bg-amber-50 hover:decoration-amber-600",
+          "cursor-help rounded-sm underline decoration-amber-400/60 decoration-dotted underline-offset-4 hover:bg-amber-500/10 hover:decoration-amber-400",
           className,
         )}
       >
@@ -49,7 +49,7 @@ export function Term({ entry, children, className }: { entry: GlossaryEntry; chi
             {entry.emoji} {entry.term}
           </span>
           <span className="block text-muted-foreground">{entry.short}</span>
-          <Link href={`/glossary#${entry.id}`} className="mt-2 block text-amber-700 underline">
+          <Link href={`/glossary#${entry.id}`} className="mt-2 block text-amber-400 underline">
             더 알아보기
           </Link>
         </span>

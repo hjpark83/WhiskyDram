@@ -82,7 +82,7 @@ export default async function WhiskyDetailPage({ params }: PageProps<"/whisky/[i
           <Badge variant="secondary">{TYPE_LABELS_KO[w.type]}</Badge>
           <Badge variant="outline">{DIFFICULTY_LABELS_KO[w.difficulty]}</Badge>
           {w.styles.map((tag) => (
-            <Badge key={tag} className="bg-amber-100 text-amber-900">
+            <Badge key={tag} className="bg-amber-500/15 text-amber-200">
               {STYLE_EMOJI[tag]} {STYLE_LABELS_KO[tag]}
             </Badge>
           ))}
@@ -163,15 +163,15 @@ export default async function WhiskyDetailPage({ params }: PageProps<"/whisky/[i
       )}
 
       <section className="grid gap-4 md:grid-cols-2">
-        <div className="flex gap-3 rounded-xl border bg-amber-50/60 p-5">
-          <Lightbulb className="mt-0.5 size-5 shrink-0 text-amber-700" aria-hidden />
+        <div className="flex gap-3 rounded-xl border bg-amber-500/10 p-5">
+          <Lightbulb className="mt-0.5 size-5 shrink-0 text-amber-400" aria-hidden />
           <div>
             <h2 className="font-semibold">초보자 팁</h2>
             <p className="mt-1 text-sm leading-relaxed"><GlossaryText text={w.beginnerTip} /></p>
           </div>
         </div>
         <div className="flex gap-3 rounded-xl border p-5">
-          <Utensils className="mt-0.5 size-5 shrink-0 text-amber-700" aria-hidden />
+          <Utensils className="mt-0.5 size-5 shrink-0 text-amber-400" aria-hidden />
           <div>
             <h2 className="font-semibold">함께 먹으면 좋은 것</h2>
             <ul className="mt-2 flex flex-wrap gap-2">
@@ -206,7 +206,7 @@ export default async function WhiskyDetailPage({ params }: PageProps<"/whisky/[i
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="grid grid-cols-[2.5rem_1fr] gap-2">
-      <dt className="font-medium text-amber-700">{label}</dt>
+      <dt className="font-medium text-amber-400">{label}</dt>
       <dd className="leading-relaxed">{children}</dd>
     </div>
   );

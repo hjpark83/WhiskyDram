@@ -109,7 +109,7 @@ export default async function HomePage() {
                 내 취향
               </Badge>
               <p className="text-xl font-bold">
-                당신은 <span className="text-amber-700">{payload.tasteTitle}</span>
+                당신은 <span className="text-amber-400">{payload.tasteTitle}</span>
               </p>
               <TasteBars profile={profile} />
             </CardContent>
@@ -122,7 +122,7 @@ export default async function HomePage() {
                   <li key={w.id}>
                     <Link
                       href={`/whisky/${w.id}`}
-                      className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm transition-colors hover:border-amber-600/60"
+                      className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm transition-colors hover:border-amber-400/60"
                     >
                       <span className="font-medium">{w.nameKo}</span>
                       <span className="text-xs text-muted-foreground">{w.name}</span>
@@ -147,9 +147,9 @@ export default async function HomePage() {
         {actions.map(({ href, icon: Icon, title, body, ready }) =>
           ready ? (
             <Link key={href} href={href} className="group">
-              <Card className="h-full transition-colors group-hover:border-amber-600/60">
+              <Card className="h-full transition-colors group-hover:border-amber-400/60">
                 <CardContent className="space-y-3 p-6">
-                  <Icon className="size-6 text-amber-700" aria-hidden />
+                  <Icon className="size-6 text-amber-400" aria-hidden />
                   <h2 className="font-semibold">{title}</h2>
                   <p className="text-sm text-muted-foreground">{body}</p>
                 </CardContent>
