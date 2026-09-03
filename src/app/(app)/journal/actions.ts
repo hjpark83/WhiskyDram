@@ -5,7 +5,14 @@ import { z } from "zod";
 import { getWhisky } from "@/data/whiskies";
 import { generateJournalRecommendation, noteWeight, type NoteHistoryItem } from "@/lib/ai/journal";
 import { createClient } from "@/lib/supabase/server";
-import { applyDeltas, rankWhiskies, ruleDeltasFromNote } from "@/lib/whisky/recommend";
+import {
+  applyDeltas,
+  matchPercent,
+  matchScore,
+  rankWhiskies,
+  ruleDeltasFromNote,
+  similarByFlavor,
+} from "@/lib/whisky/recommend";
 import { EMPTY_TASTE_PROFILE, type TasteProfile } from "@/lib/whisky/types";
 
 const inputSchema = z.object({
@@ -62,6 +69,18 @@ export async function submitTastingNote(raw: SubmitNoteInput): Promise<SubmitNot
   );
   const excludeIds = [whiskyId, ...history.map((h) => h.whisky.id)];
   const candidates = rankWhiskies(provisional, { excludeIds, maxDifficulty: 4 }, 8);
+  // 좋았던 병이면 "그 맛의 다음 단계"도 후보에 넣어요 (예: 라프로익 10 → 쿼터 캐스크, 아드벡).
+  if (rating >= 4) {
+    const have = new Set(candidates.map((c) => c.whisky.id));
+    for (const w of similarByFlavor(whisky, 3, excludeIds)) {
+      if (have.has(w.id)) continue;
+      candidates.push({
+        whisky: w,
+        score: matchScore(provisional, w),
+        percent: matchPercent(provisional, w),
+      });
+    }
+  }
 
   const { payload, profileAfter } = await generateJournalRecommendation({
     whisky,

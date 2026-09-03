@@ -180,6 +180,19 @@ export function rankWhiskies(
   return diverse;
 }
 
+/** 향미 벡터가 가까운 다른 병 (같은 병·제외 목록 제외). "이게 좋았으면 다음은 이것" 용도. */
+export function similarByFlavor(target: Whisky, n = 3, excludeIds: string[] = []): Whisky[] {
+  const excluded = new Set([target.id, ...excludeIds]);
+  return WHISKIES.filter((w) => !excluded.has(w.id))
+    .map((w) => ({
+      w,
+      d: TASTE_AXES.reduce((acc, a) => acc + (w.flavor[a] - target.flavor[a]) ** 2, 0),
+    }))
+    .sort((a, b) => a.d - b.d)
+    .slice(0, n)
+    .map((x) => x.w);
+}
+
 /** 프로필을 한 줄로 요약 (AI 없이 쓰는 폴백 / 프롬프트 재료) */
 export function describeProfile(profile: TasteProfile): string[] {
   const out: string[] = [];

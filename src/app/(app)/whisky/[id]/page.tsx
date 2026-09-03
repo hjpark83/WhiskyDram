@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FlavorBars } from "@/components/whisky/taste-bars";
 import { MatchBadge, WhiskyCard } from "@/components/whisky/whisky-card";
-import { getWhisky, WHISKIES } from "@/data/whiskies";
+import { getWhisky } from "@/data/whiskies";
 import { createClient } from "@/lib/supabase/server";
 import {
   DIFFICULTY_LABELS_KO,
@@ -21,13 +21,8 @@ import {
   STYLE_LABELS_KO,
   TYPE_LABELS_KO,
 } from "@/lib/whisky/format";
-import { hasProfile, matchPercent } from "@/lib/whisky/recommend";
-import {
-  EMPTY_TASTE_PROFILE,
-  TASTE_AXES,
-  type TasteProfile,
-  type Whisky,
-} from "@/lib/whisky/types";
+import { hasProfile, matchPercent, similarByFlavor } from "@/lib/whisky/recommend";
+import { EMPTY_TASTE_PROFILE, type TasteProfile } from "@/lib/whisky/types";
 
 export async function generateMetadata({
   params,
@@ -35,18 +30,6 @@ export async function generateMetadata({
   const { id } = await params;
   const w = getWhisky(id);
   return { title: w ? w.nameKo : "위스키" };
-}
-
-/** 향미 벡터가 가까운 다른 병 (같은 병 제외) */
-function similarWhiskies(target: Whisky, n = 3): Whisky[] {
-  return WHISKIES.filter((w) => w.id !== target.id)
-    .map((w) => ({
-      w,
-      d: TASTE_AXES.reduce((acc, a) => acc + (w.flavor[a] - target.flavor[a]) ** 2, 0),
-    }))
-    .sort((a, b) => a.d - b.d)
-    .slice(0, n)
-    .map((x) => x.w);
 }
 
 export default async function WhiskyDetailPage({ params }: PageProps<"/whisky/[id]">) {
@@ -70,7 +53,7 @@ export default async function WhiskyDetailPage({ params }: PageProps<"/whisky/[i
     if (hasProfile(stored)) profile = { ...EMPTY_TASTE_PROFILE, ...stored };
   }
   const percent = profile ? matchPercent(profile, w) : null;
-  const similar = similarWhiskies(w);
+  const similar = similarByFlavor(w, 3);
 
   return (
     <div className="space-y-8">
