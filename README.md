@@ -86,7 +86,7 @@ supabase/schema.sql           # DB 스키마 (profiles, tasting_notes, recommend
 ## 로드맵
 
 - [x] P0 · 프로젝트 세팅, 인증, 배포 파이프라인
-- [x] P0 · 위스키 사전 데이터 (81병, `src/data/whiskies.ts`)
+- [x] P0 · 위스키 사전 데이터 (179병, `src/data/whiskies.ts`)
 - [x] P0 · 취향 진단 → AI 추천 (`/quiz` → `/recommend`) + 위스키 탐색 (`/whisky`)
 - [ ] P1 · 병 스캔 (비전)
 - [ ] P1 · 테이스팅 노트 → 취향 갱신 → 재추천

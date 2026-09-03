@@ -68,13 +68,14 @@ export function formatOrigin(w: Whisky): string {
 // 원산지 (country 에서 파생)
 // ---------------------------------------------------------------------------
 
-export const ORIGIN_ORDER: Origin[] = ["scotch", "irish", "japanese", "american", "other"];
+export const ORIGIN_ORDER: Origin[] = ["scotch", "irish", "japanese", "american", "korean", "other"];
 
 export const ORIGIN_LABELS_KO: Record<Origin, string> = {
   scotch: "스카치",
   irish: "아이리시",
   japanese: "재패니즈",
   american: "아메리칸",
+  korean: "코리안",
   other: "그 외",
 };
 
@@ -83,6 +84,7 @@ export const ORIGIN_DESCRIPTIONS_KO: Record<Origin, string> = {
   irish: "아일랜드. 대개 3번 증류해 아주 부드럽고 가벼워요.",
   japanese: "일본. 섬세하고 균형 잡힌 스타일. 하이볼 문화의 고향.",
   american: "미국. 버번·라이·테네시. 새 오크통을 써서 바닐라·캐러멜 단맛이 진해요.",
+  korean: "한국. 2020년대에 첫 싱글몰트가 나왔어요. 사계절 온도차로 숙성이 빨라요.",
   other: "대만 등. 더운 기후에서 빨리 숙성돼 열대과일 향이 나기도 해요.",
 };
 
@@ -97,6 +99,8 @@ export function getOrigin(w: Whisky): Origin {
       return "japanese";
     case "미국":
       return "american";
+    case "한국":
+      return "korean";
     default:
       return "other";
   }

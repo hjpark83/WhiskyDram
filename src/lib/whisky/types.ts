@@ -72,7 +72,7 @@ export const STYLE_TAGS = [
 export type StyleTag = (typeof STYLE_TAGS)[number];
 
 /** 원산지 분류 (country 에서 파생) */
-export type Origin = "scotch" | "irish" | "japanese" | "american" | "other";
+export type Origin = "scotch" | "irish" | "japanese" | "american" | "korean" | "other";
 
 export interface Whisky {
   id: string; // slug, e.g. "glenmorangie-10"
