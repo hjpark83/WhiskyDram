@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { AlertTriangle, Camera, GlassWater, ImagePlus, NotebookPen, RotateCcw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { WhiskyGlass } from "@/components/whisky/whisky-glass";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -114,7 +115,7 @@ export function ScanForm({ personalized }: { personalized: boolean }) {
       <div>
         {pending && (
           <div className="flex h-full min-h-[240px] flex-col items-center justify-center gap-3 text-center">
-            <Sparkles className="size-8 animate-pulse text-amber-400" aria-hidden />
+            <WhiskyGlass size={140} />
             <p className="font-semibold">라벨을 읽고 사전에서 찾는 중…</p>
             <p className="text-sm text-muted-foreground">보통 5~10초 걸려요.</p>
           </div>

@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LiquidSwatch } from "@/components/whisky/liquid-swatch";
 import { TasteBars } from "@/components/whisky/taste-bars";
+import { WhiskyGlass } from "@/components/whisky/whisky-glass";
 import { getDistilleries } from "@/data/distilleries";
 import { GLOSSARY } from "@/data/glossary";
 import { getWhiskies, WHISKIES } from "@/data/whiskies";
@@ -75,10 +76,10 @@ export default function LandingPage() {
       <section className="mx-auto grid max-w-5xl items-center gap-10 px-6 pb-16 pt-10 lg:grid-cols-[1.1fr_1fr] lg:pt-16">
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
           <p className="mb-4 text-sm font-medium text-amber-400">Your first dram, chosen for you.</p>
-          <h1 className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
-            위스키, 뭐부터
+          <h1 className="text-4xl leading-tight tracking-tight sm:text-5xl">
+            <span className="text-shine">위스키, 뭐부터</span>
             <br />
-            마셔야 할지 모르겠다면
+            <span className="text-shine">마셔야 할지 모르겠다면</span>
           </h1>
           <p className="mt-6 max-w-xl text-lg text-muted-foreground">
             전문 용어 없이, 내 입맛에 맞는 첫 잔을 찾아드려요. 마신 후기를 남길수록 추천은 더
@@ -104,8 +105,10 @@ export default function LandingPage() {
           </dl>
         </div>
 
-        {/* 예시 결과 카드 */}
-        <Card className="animate-in fade-in slide-in-from-bottom-6 gap-0 overflow-hidden border-amber-400/40 py-0 shadow-lg glow-amber duration-700 delay-150">
+        {/* 조명 아래 잔 + 예시 결과 카드 */}
+        <div className="relative flex flex-col items-center">
+          <WhiskyGlass size={210} className="animate-in fade-in zoom-in-95 duration-1000" />
+          <Card className="animate-in fade-in slide-in-from-bottom-6 -mt-3 w-full gap-0 overflow-hidden border-amber-400/40 py-0 shadow-lg glow-amber duration-700 delay-150">
           <div className="rounded-t-xl bg-amber-500 px-5 py-4 text-amber-950">
             <p className="flex items-center gap-1.5 text-xs opacity-90">
               <Sparkles className="size-3.5" /> 진단 결과 예시
@@ -131,7 +134,8 @@ export default function LandingPage() {
               ))}
             </ul>
           </CardContent>
-        </Card>
+          </Card>
+        </div>
       </section>
 
       {/* How it works */}

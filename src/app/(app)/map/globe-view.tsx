@@ -53,6 +53,19 @@ export interface GlobeDistillery {
   bestPercent: number | null;
 }
 
+/** 1단계: 나라·지역 묶음 */
+interface Cluster {
+  key: string;
+  label: string;
+  emoji: string;
+  lat: number;
+  lng: number;
+  altitude: number;
+  count: number;
+  bottles: number;
+  bestPercent: number | null;
+}
+
 const ORIGIN_COLORS: Record<Origin, string> = {
   scotch: "#f0c96a",
   irish: "#4ade80",
@@ -62,15 +75,36 @@ const ORIGIN_COLORS: Record<Origin, string> = {
   other: "#c4b5fd",
 };
 
+const COUNTRY_EMOJI: Record<string, string> = {
+  스코틀랜드: "🏴󠁧󠁢󠁳󠁣󠁴󠁿",
+  아일랜드: "🇮🇪",
+  북아일랜드: "🇮🇪",
+  미국: "🇺🇸",
+  일본: "🇯🇵",
+  한국: "🇰🇷",
+  대만: "🇹🇼",
+  인도: "🇮🇳",
+  호주: "🇦🇺",
+  웨일스: "🇬🇧",
+  "영국(잉글랜드)": "🇬🇧",
+  캐나다: "🇨🇦",
+};
+
 const VIEWS: { id: string; label: string; lat: number; lng: number; altitude: number }[] = [
   { id: "world", label: "전체", lat: 30, lng: 20, altitude: 2.4 },
-  { id: "scotland", label: "스코틀랜드", lat: 57, lng: -4.2, altitude: 0.45 },
-  { id: "islay", label: "아일라 섬", lat: 55.75, lng: -6.2, altitude: 0.18 },
-  { id: "ireland", label: "아일랜드", lat: 53.3, lng: -7.5, altitude: 0.5 },
-  { id: "kentucky", label: "켄터키", lat: 37.9, lng: -85.2, altitude: 0.5 },
+  { id: "scotland", label: "스코틀랜드", lat: 57, lng: -4.2, altitude: 0.5 },
+  { id: "islay", label: "아일라 섬", lat: 55.75, lng: -6.2, altitude: 0.2 },
+  { id: "ireland", label: "아일랜드", lat: 53.3, lng: -7.5, altitude: 0.55 },
+  { id: "kentucky", label: "켄터키", lat: 37.9, lng: -85.2, altitude: 0.55 },
   { id: "japan", label: "일본", lat: 36.5, lng: 137.5, altitude: 0.9 },
   { id: "korea", label: "한국", lat: 37.6, lng: 127.1, altitude: 0.5 },
 ];
+
+/** 이 고도보다 가까우면 증류소 핀, 멀면 나라·지역 묶음 */
+const ZOOM_THRESHOLD = 1.15;
+
+const POT_STILL_SVG =
+  '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 3h6v2l-1 1v2.3c2.6 1 4.2 3.6 4.2 6.7V19a2 2 0 0 1-2 2H7.8a2 2 0 0 1-2-2v-4c0-3.1 1.6-5.7 4.2-6.7V6L9 5V3z" fill="currentColor"/><path d="M15 8.5c3.2.3 4.6 2 4.6 4.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
 
 function matchColor(percent: number | null): string {
   if (percent === null) return "#a8a29e";
@@ -78,6 +112,39 @@ function matchColor(percent: number | null): string {
   if (percent >= 60) return "#e8c66f";
   if (percent >= 45) return "#c9b48a";
   return "#6b6258";
+}
+
+const COUNTRY_MERGE: Record<string, string> = {
+  북아일랜드: "아일랜드",
+  웨일스: "영국",
+  "영국(잉글랜드)": "영국",
+};
+
+function buildClusters(distilleries: GlobeDistillery[]): Cluster[] {
+  const groups = new Map<string, GlobeDistillery[]>();
+  for (const d of distilleries) {
+    const key = COUNTRY_MERGE[d.country] ?? d.country;
+    groups.set(key, [...(groups.get(key) ?? []), d]);
+  }
+  return [...groups.entries()].map(([label, list]) => {
+    const lat = list.reduce((a, d) => a + d.lat, 0) / list.length;
+    const lng = list.reduce((a, d) => a + d.lng, 0) / list.length;
+    const emoji = COUNTRY_EMOJI[list[0].country] ?? "🥃";
+    const spread = Math.max(...list.map((d) => Math.hypot(d.lat - lat, d.lng - lng)), 0.3);
+    const percents = list.map((d) => d.bestPercent).filter((p): p is number => p !== null);
+    return {
+      key: label,
+      label,
+      emoji,
+      lat,
+      lng,
+      // 흩어진 정도에 맞춰 확대 깊이 결정 (스코틀랜드 0.5 안팎, 미국 0.9)
+      altitude: Math.max(0.3, Math.min(0.95, spread * 0.1)),
+      count: list.length,
+      bottles: list.reduce((a, d) => a + d.whiskies.length, 0),
+      bestPercent: percents.length ? Math.max(...percents) : null,
+    };
+  });
 }
 
 export function GlobeView({
@@ -89,12 +156,15 @@ export function GlobeView({
 }) {
   const globeRef = useRef<GlobeMethods | undefined>(undefined);
   const containerRef = useRef<HTMLDivElement>(null);
+  const markerEls = useRef(new Map<string, HTMLElement>());
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [selected, setSelected] = useState<GlobeDistillery | null>(null);
   const [activeView, setActiveView] = useState("world");
   const [altitude, setAltitude] = useState(2.2);
-  const [sheetOpen, setSheetOpen] = useState(true); // 모바일 하단 시트 펼침
-  const baseRadius = Math.max(0.06, Math.min(0.3, altitude * 0.14));
+  const [sheetOpen, setSheetOpen] = useState(true);
+  const zoomed = altitude < ZOOM_THRESHOLD;
+
+  const clusters = useMemo(() => buildClusters(distilleries), [distilleries]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -107,11 +177,11 @@ export function GlobeView({
     return () => ro.disconnect();
   }, []);
 
-  const flyTo = useCallback((lat: number, lng: number, altitude: number, ms = 900) => {
+  const flyTo = useCallback((lat: number, lng: number, alt: number, ms = 900) => {
     const g = globeRef.current;
     if (!g) return;
     g.controls().autoRotate = false;
-    g.pointOfView({ lat, lng, altitude }, ms);
+    g.pointOfView({ lat, lng, altitude: alt }, ms);
   }, []);
 
   const onReady = useCallback(() => {
@@ -119,21 +189,69 @@ export function GlobeView({
     if (!g) return;
     const c = g.controls();
     c.autoRotate = true;
-    c.autoRotateSpeed = 0.45;
+    c.autoRotateSpeed = 0.4;
     c.enableZoom = true;
     g.pointOfView({ lat: 40, lng: -10, altitude: 2.1 }, 0);
   }, []);
 
-  const onPointClick = useCallback(
-    (point: object) => {
-      const d = point as GlobeDistillery;
+  const selectDistillery = useCallback(
+    (d: GlobeDistillery) => {
       setSelected(d);
       setActiveView("");
       setSheetOpen(true);
-      // 패널이 오른쪽에 뜨니 살짝 왼쪽으로 치우쳐 보이게
-      flyTo(d.lat, d.lng + 4, 0.4);
+      flyTo(d.lat, d.lng + 3, Math.min(0.4, Math.max(0.2, altitude)));
+    },
+    [flyTo, altitude],
+  );
+
+  const selectCluster = useCallback(
+    (c: Cluster) => {
+      setSelected(null);
+      setActiveView(c.key);
+      flyTo(c.lat, c.lng, c.altitude);
     },
     [flyTo],
+  );
+
+  // 선택 상태를 핀 DOM 에 반영 (CSS2D 요소는 React 밖에 있어요)
+  useEffect(() => {
+    for (const [name, el] of markerEls.current) {
+      el.classList.toggle("is-selected", selected?.name === name);
+    }
+  }, [selected, zoomed]);
+
+  const htmlElement = useCallback(
+    (obj: object) => {
+      const el = document.createElement("div");
+      el.className = "globe-marker";
+      if ("whiskies" in obj) {
+        const d = obj as GlobeDistillery;
+        const inner = document.createElement("div");
+        inner.className = "globe-pin-inner";
+        inner.dataset.label = `${d.nameKo} · ${d.whiskies.length}병${d.bestPercent !== null ? ` · ${d.bestPercent}%` : ""}`;
+        inner.innerHTML = POT_STILL_SVG;
+        if (personalized) inner.style.color = matchColor(d.bestPercent);
+        el.appendChild(inner);
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          selectDistillery(d);
+        });
+        markerEls.current.set(d.name, el);
+        if (selected?.name === d.name) el.classList.add("is-selected");
+      } else {
+        const c = obj as Cluster;
+        const inner = document.createElement("div");
+        inner.className = "globe-cluster-inner";
+        inner.innerHTML = `<span>${c.emoji}</span><b>${c.label}</b><small>증류소 ${c.count}</small>`;
+        el.appendChild(inner);
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          selectCluster(c);
+        });
+      }
+      return el;
+    },
+    [personalized, selectDistillery, selectCluster, selected],
   );
 
   const topByMatch = useMemo(
@@ -147,15 +265,6 @@ export function GlobeView({
     [distilleries, personalized],
   );
 
-  const pointColor = useCallback(
-    (point: object) => {
-      const d = point as GlobeDistillery;
-      if (selected && selected.name === d.name) return "#ffffff";
-      return personalized ? matchColor(d.bestPercent) : ORIGIN_COLORS[d.origin];
-    },
-    [personalized, selected],
-  );
-
   const panel = selected ? (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-2">
@@ -165,7 +274,7 @@ export function GlobeView({
             {selected.region !== "Other" && <Badge variant="outline">{REGION_LABELS_KO[selected.region]}</Badge>}
             {selected.founded && <Badge variant="outline">{selected.founded}년 설립</Badge>}
           </div>
-          <h2 className="mt-2 text-2xl font-bold text-amber-100">{selected.nameKo}</h2>
+          <h2 className="mt-2 text-2xl text-amber-100">{selected.nameKo}</h2>
           <p className="text-xs text-muted-foreground">
             {selected.name} · {selected.country}
           </p>
@@ -217,7 +326,11 @@ export function GlobeView({
     <div className="space-y-4">
       <div className="flex items-center gap-2 text-muted-foreground">
         <MapPin className="size-4 shrink-0" aria-hidden />
-        <p className="text-sm">점을 누르면 그 증류소의 병이 여기 나와요. 드래그로 돌리고, 스크롤로 확대.</p>
+        <p className="text-sm">
+          {zoomed
+            ? "증류소 아이콘을 누르면 그곳의 병이 여기 나와요."
+            : "나라나 지역을 누르면 가까이 날아가요. 그다음 증류소 아이콘을 눌러보세요."}
+        </p>
       </div>
       {topByMatch.length > 0 ? (
         <div>
@@ -227,7 +340,7 @@ export function GlobeView({
               <li key={d.name}>
                 <button
                   type="button"
-                  onClick={() => onPointClick(d)}
+                  onClick={() => selectDistillery(d)}
                   className="flex w-full items-center justify-between rounded-lg border border-amber-400/15 bg-amber-500/5 px-3 py-2 text-left text-sm hover:border-amber-400/50"
                 >
                   <span>
@@ -243,11 +356,25 @@ export function GlobeView({
       ) : (
         <div>
           <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">둘러보기 좋은 곳</p>
-          <ul className="space-y-1 text-sm text-muted-foreground">
-            <li>· <b className="text-foreground">아일라 섬</b>: 연기 향의 성지, 작은 섬에 증류소 9곳</li>
-            <li>· <b className="text-foreground">스페이사이드</b>: 강 하나에 증류소 50곳, 과일·꿀 향</li>
-            <li>· <b className="text-foreground">켄터키</b>: 버번의 고향, 옥수수와 새 오크통</li>
-            <li>· <b className="text-foreground">한국</b>: 남양주·김포에서 시작된 한국 싱글몰트</li>
+          <ul className="space-y-1.5">
+            {clusters
+              .filter((c) => c.count >= 3)
+              .sort((a, b) => b.count - a.count)
+              .slice(0, 6)
+              .map((c) => (
+                <li key={c.key}>
+                  <button
+                    type="button"
+                    onClick={() => selectCluster(c)}
+                    className="flex w-full items-center justify-between rounded-lg border border-amber-400/15 bg-amber-500/5 px-3 py-2 text-left text-sm hover:border-amber-400/50"
+                  >
+                    <span>
+                      {c.emoji} <span className="font-medium">{c.label}</span>
+                    </span>
+                    <span className="text-xs text-muted-foreground">증류소 {c.count} · {c.bottles}병</span>
+                  </button>
+                </li>
+              ))}
           </ul>
         </div>
       )}
@@ -274,31 +401,34 @@ export function GlobeView({
           atmosphereAltitude={0.2}
           rendererConfig={{ preserveDrawingBuffer: true, antialias: true }}
           onGlobeReady={onReady}
-          pointsData={distilleries}
+          onZoom={(pov: { altitude: number }) => setAltitude(pov.altitude)}
+          // 멀리서는 작은 점만 (분위기용), 가까이서는 아이콘이 대신해요
+          pointsData={zoomed ? [] : distilleries}
           pointLat="lat"
           pointLng="lng"
-          pointColor={pointColor}
-          pointAltitude={(p: object) => Math.min(0.035, 0.01 + (p as GlobeDistillery).whiskies.length * 0.0025)}
-          pointRadius={(p: object) =>
-            selected && selected.name === (p as GlobeDistillery).name ? baseRadius * 1.8 : baseRadius
+          pointColor={(p: object) =>
+            personalized ? matchColor((p as GlobeDistillery).bestPercent) : ORIGIN_COLORS[(p as GlobeDistillery).origin]
           }
-          onZoom={(pov: { altitude: number }) => setAltitude(pov.altitude)}
-          pointsMerge={false}
-          pointLabel={(p: object) => {
-            const d = p as GlobeDistillery;
-            const pct = d.bestPercent !== null ? ` · 취향 ${d.bestPercent}%` : "";
-            return `<div style="background:rgba(26,18,12,.92);color:#f3e7d3;padding:6px 10px;border-radius:8px;font-size:12px;border:1px solid rgba(217,164,65,.5)"><b>${d.nameKo}</b><br/>${d.country} · ${d.whiskies.length}병${pct}</div>`;
+          pointAltitude={0.004}
+          pointRadius={0.16}
+          pointsMerge={true}
+          htmlElementsData={zoomed ? distilleries : clusters}
+          htmlLat="lat"
+          htmlLng="lng"
+          htmlAltitude={zoomed ? 0.01 : 0.03}
+          htmlElement={htmlElement}
+          htmlElementVisibilityModifier={(el: HTMLElement, isVisible: boolean) => {
+            el.style.visibility = isVisible ? "visible" : "hidden";
           }}
-          onPointClick={onPointClick}
+          htmlTransitionDuration={0}
         />
       )}
 
       {/* 좌상단: 제목 + 빠른 이동 */}
       <div className="glass pointer-events-auto absolute left-3 top-3 max-w-[calc(100%-1.5rem)] rounded-2xl p-3 sm:left-5 sm:top-5 sm:max-w-md sm:p-4">
-        <h1 className="text-lg font-bold text-amber-100 sm:text-xl">증류소 지도</h1>
+        <h1 className="text-lg text-amber-100 sm:text-xl">증류소 지도</h1>
         <p className="mt-0.5 hidden text-xs text-muted-foreground sm:block">
-          {distilleries.length}곳의 증류소.{" "}
-          {personalized ? "점 색이 진할수록 내 취향과 잘 맞아요." : "취향 진단을 하면 점 색이 적합도로 바뀌어요."}
+          {distilleries.length}곳의 증류소. 나라를 누르고, 가까이 가서 증류소 아이콘을 눌러보세요.
         </p>
         <div className="mt-2 flex flex-wrap gap-1.5">
           {VIEWS.map((v) => (
@@ -307,6 +437,7 @@ export function GlobeView({
               type="button"
               onClick={() => {
                 setActiveView(v.id);
+                setSelected(null);
                 flyTo(v.lat, v.lng, v.altitude);
               }}
               className={cn(
@@ -336,6 +467,7 @@ export function GlobeView({
             <Legend key={o} color={ORIGIN_COLORS[o]} label={ORIGIN_LABELS_KO[o]} />
           ))
         )}
+        <span className="rounded-full bg-black/40 px-2 py-0.5">{zoomed ? "증류소 보기" : "나라·지역 보기 · 스크롤로 확대"}</span>
       </div>
 
       {/* 우측: 정보 패널 (데스크톱) */}

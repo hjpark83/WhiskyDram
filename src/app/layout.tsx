@@ -1,24 +1,24 @@
 import type { Metadata } from "next";
-import { Noto_Sans_KR, Noto_Serif_KR, Playfair_Display, Geist_Mono } from "next/font/google";
+import { IBM_Plex_Sans_KR, Hahmlet, Cormorant_Garamond, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
-const notoSansKr = Noto_Sans_KR({
+const plexSansKr = IBM_Plex_Sans_KR({
   variable: "--font-sans",
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
+  weight: ["400", "500", "600"],
 });
 
-const notoSerifKr = Noto_Serif_KR({
+const hahmlet = Hahmlet({
   variable: "--font-serif",
   subsets: ["latin"],
-  weight: ["600", "700"],
+  weight: ["500", "600", "700"],
 });
 
-const playfair = Playfair_Display({
+const cormorant = Cormorant_Garamond({
   variable: "--font-brand",
   subsets: ["latin"],
-  weight: ["600", "700"],
+  weight: ["500", "600", "700"],
   style: ["normal", "italic"],
 });
 
@@ -40,7 +40,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="ko"
-      className={`${notoSansKr.variable} ${notoSerifKr.variable} ${playfair.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${plexSansKr.variable} ${hahmlet.variable} ${cormorant.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         {children}
