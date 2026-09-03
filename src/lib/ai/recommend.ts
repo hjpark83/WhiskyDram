@@ -4,7 +4,13 @@ import { z } from "zod";
 import { CLAUDE_MODEL, getAnthropic } from "@/lib/ai/client";
 import { AXIS_LABELS_KO, TASTE_AXES, type TasteProfile, type Whisky } from "@/lib/whisky/types";
 import { describeProfile, type ScoredWhisky } from "@/lib/whisky/recommend";
-import { formatPriceRange, TYPE_LABELS_KO } from "@/lib/whisky/format";
+import {
+  formatPriceRange,
+  getOrigin,
+  ORIGIN_LABELS_KO,
+  STYLE_LABELS_KO,
+  TYPE_LABELS_KO,
+} from "@/lib/whisky/format";
 import { QUIZ_QUESTIONS, type QuizAnswers } from "@/data/quiz";
 
 // ---------------------------------------------------------------------------
@@ -62,7 +68,8 @@ function whiskyCard(w: Whisky, percent: number | null): string {
   const flavor = TASTE_AXES.map((a) => `${AXIS_LABELS_KO[a]} ${w.flavor[a]}`).join(", ");
   return [
     `[${w.id}] ${w.nameKo} (${w.name})`,
-    `  종류: ${TYPE_LABELS_KO[w.type]} · ${w.country} · ${w.abv}% · 가격 ${formatPriceRange(w.priceKrw)} · 난이도 ${w.difficulty}/5${percent !== null ? ` · 계산된 적합도 ${percent}%` : ""}`,
+    `  분류: ${ORIGIN_LABELS_KO[getOrigin(w)]} · ${TYPE_LABELS_KO[w.type]}${w.styles.length ? ` · 스타일: ${w.styles.map((t) => STYLE_LABELS_KO[t]).join(", ")}` : ""}`,
+    `  ${w.country} · ${w.abv}% · 가격 ${formatPriceRange(w.priceKrw)} · 난이도 ${w.difficulty}/5${percent !== null ? ` · 계산된 적합도 ${percent}%` : ""}`,
     `  향미(0~5): ${flavor}`,
     `  향: ${w.notes.nose} / 맛: ${w.notes.palate} / 여운: ${w.notes.finish}`,
     `  메모: ${w.beginnerTip}`,

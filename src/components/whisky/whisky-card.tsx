@@ -6,6 +6,8 @@ import {
   DIFFICULTY_LABELS_KO,
   formatOrigin,
   formatPriceRange,
+  STYLE_EMOJI,
+  STYLE_LABELS_KO,
   TYPE_SHORT_KO,
 } from "@/lib/whisky/format";
 import type { Whisky } from "@/lib/whisky/types";
@@ -49,6 +51,11 @@ export function WhiskyCard({
             <Badge variant="secondary">{TYPE_SHORT_KO[whisky.type]}</Badge>
             <Badge variant="outline">{formatOrigin(whisky)}</Badge>
             <Badge variant="outline">{DIFFICULTY_LABELS_KO[whisky.difficulty]}</Badge>
+            {whisky.styles.map((tag) => (
+              <Badge key={tag} className="bg-amber-100 text-amber-900">
+                {STYLE_EMOJI[tag]} {STYLE_LABELS_KO[tag]}
+              </Badge>
+            ))}
           </div>
           <p className="line-clamp-2 text-sm text-muted-foreground">{whisky.notes.nose}</p>
           <p className="mt-auto text-sm font-medium">{formatPriceRange(whisky.priceKrw)}</p>

@@ -14,6 +14,11 @@ import {
   formatAge,
   formatOrigin,
   formatPriceRange,
+  getOrigin,
+  ORIGIN_LABELS_KO,
+  STYLE_DESCRIPTIONS_KO,
+  STYLE_EMOJI,
+  STYLE_LABELS_KO,
   TYPE_LABELS_KO,
 } from "@/lib/whisky/format";
 import { hasProfile, matchPercent } from "@/lib/whisky/recommend";
@@ -76,8 +81,14 @@ export default async function WhiskyDetailPage({ params }: PageProps<"/whisky/[i
 
       <header className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="secondary">{ORIGIN_LABELS_KO[getOrigin(w)]}</Badge>
           <Badge variant="secondary">{TYPE_LABELS_KO[w.type]}</Badge>
           <Badge variant="outline">{DIFFICULTY_LABELS_KO[w.difficulty]}</Badge>
+          {w.styles.map((tag) => (
+            <Badge key={tag} className="bg-amber-100 text-amber-900">
+              {STYLE_EMOJI[tag]} {STYLE_LABELS_KO[tag]}
+            </Badge>
+          ))}
           <MatchBadge percent={percent} />
         </div>
         <div>
@@ -132,6 +143,24 @@ export default async function WhiskyDetailPage({ params }: PageProps<"/whisky/[i
           </CardContent>
         </Card>
       </section>
+
+      {w.styles.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-lg font-bold">이 병의 스타일</h2>
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {w.styles.map((tag) => (
+              <li key={tag} className="rounded-xl border p-4 text-sm">
+                <p className="font-semibold">
+                  {STYLE_EMOJI[tag]} {STYLE_LABELS_KO[tag]}
+                </p>
+                <p className="mt-1 leading-relaxed text-muted-foreground">
+                  {STYLE_DESCRIPTIONS_KO[tag]}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="grid gap-4 md:grid-cols-2">
         <div className="flex gap-3 rounded-xl border bg-amber-50/60 p-5">
