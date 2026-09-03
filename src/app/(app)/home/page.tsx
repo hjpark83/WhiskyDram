@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Camera, Compass, Globe2, NotebookPen, Search, Sparkles } from "lucide-react";
+import { Camera, Compass, Globe2, MessageCircle, NotebookPen, Search, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,6 +17,13 @@ const actions = [
     icon: Compass,
     title: "취향 진단하기",
     body: "1분이면 끝나요. 내 첫 위스키 3병을 추천받으세요.",
+    ready: true,
+  },
+  {
+    href: "/chat",
+    icon: MessageCircle,
+    title: "AI 소믈리에에게 묻기",
+    body: "“삼겹살에 뭐 마시지?” 같은 질문에 사전에서 찾아 답해요.",
     ready: true,
   },
   {

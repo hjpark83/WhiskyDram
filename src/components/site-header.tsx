@@ -6,6 +6,7 @@ const nav = [
   { href: "/home", label: "홈" },
   { href: "/quiz", label: "취향 진단" },
   { href: "/recommend", label: "내 추천" },
+  { href: "/chat", label: "AI 소믈리에" },
   { href: "/whisky", label: "위스키 탐색" },
   { href: "/scan", label: "병 스캔" },
   { href: "/journal", label: "테이스팅 노트" },
