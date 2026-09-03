@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { LiquidSwatch } from "@/components/whisky/liquid-swatch";
 import { cn } from "@/lib/utils";
 import {
   DIFFICULTY_LABELS_KO,
@@ -41,9 +42,12 @@ export function WhiskyCard({
       <Card className="h-full transition-colors group-hover:border-amber-600/60">
         <CardContent className="flex h-full flex-col gap-3 p-5">
           <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <h3 className="truncate font-semibold">{whisky.nameKo}</h3>
-              <p className="truncate text-xs text-muted-foreground">{whisky.name}</p>
+            <div className="flex min-w-0 items-center gap-2">
+              <LiquidSwatch whisky={whisky} size="sm" />
+              <div className="min-w-0">
+                <h3 className="truncate font-semibold">{whisky.nameKo}</h3>
+                <p className="truncate text-xs text-muted-foreground">{whisky.name}</p>
+              </div>
             </div>
             <MatchBadge percent={percent} />
           </div>

@@ -11,6 +11,7 @@ const nav = [
   { href: "/scan", label: "병 스캔" },
   { href: "/journal", label: "테이스팅 노트" },
   { href: "/map", label: "증류소 지도" },
+  { href: "/glossary", label: "용어 사전" },
 ];
 
 export function SiteHeader({ email }: { email: string | null }) {

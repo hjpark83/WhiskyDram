@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Lightbulb, MapPin, NotebookPen, Utensils } from "lucide-react";
+import { ArrowLeft, GitCompareArrows, Lightbulb, MapPin, NotebookPen, Utensils } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FlavorBars } from "@/components/whisky/taste-bars";
+import { LiquidSwatch } from "@/components/whisky/liquid-swatch";
+import { GlossaryText } from "@/components/whisky/term";
 import { MatchBadge, WhiskyCard } from "@/components/whisky/whisky-card";
 import { getWhisky } from "@/data/whiskies";
 import { createClient } from "@/lib/supabase/server";
@@ -62,10 +64,16 @@ export default async function WhiskyDetailPage({ params }: PageProps<"/whisky/[i
           <ArrowLeft data-icon="inline-start" />
           위스키 탐색
         </Button>
-        <Button size="sm" render={<Link href={`/journal?whisky=${w.id}`} />}>
-          <NotebookPen data-icon="inline-start" />
-          이 병 후기 남기기
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" render={<Link href={`/compare?a=${w.id}`} />}>
+            <GitCompareArrows data-icon="inline-start" />
+            다른 병과 비교
+          </Button>
+          <Button size="sm" render={<Link href={`/journal?whisky=${w.id}`} />}>
+            <NotebookPen data-icon="inline-start" />
+            이 병 후기 남기기
+          </Button>
+        </div>
       </div>
 
       <header className="space-y-3">
@@ -80,9 +88,12 @@ export default async function WhiskyDetailPage({ params }: PageProps<"/whisky/[i
           ))}
           <MatchBadge percent={percent} />
         </div>
-        <div>
-          <h1 className="text-3xl font-bold">{w.nameKo}</h1>
-          <p className="text-muted-foreground">{w.name}</p>
+        <div className="flex items-center gap-3">
+          <LiquidSwatch whisky={w} size="lg" />
+          <div>
+            <h1 className="text-3xl font-bold">{w.nameKo}</h1>
+            <p className="text-muted-foreground">{w.name}</p>
+          </div>
         </div>
         <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
           <div>
@@ -110,9 +121,9 @@ export default async function WhiskyDetailPage({ params }: PageProps<"/whisky/[i
             <CardTitle className="text-base">어떤 맛일까요?</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <Row label="향">{w.notes.nose}</Row>
-            <Row label="맛">{w.notes.palate}</Row>
-            <Row label="여운">{w.notes.finish}</Row>
+            <Row label="향"><GlossaryText text={w.notes.nose} /></Row>
+            <Row label="맛"><GlossaryText text={w.notes.palate} /></Row>
+            <Row label="여운"><GlossaryText text={w.notes.finish} /></Row>
           </CardContent>
         </Card>
         <Card>
@@ -143,7 +154,7 @@ export default async function WhiskyDetailPage({ params }: PageProps<"/whisky/[i
                   {STYLE_EMOJI[tag]} {STYLE_LABELS_KO[tag]}
                 </p>
                 <p className="mt-1 leading-relaxed text-muted-foreground">
-                  {STYLE_DESCRIPTIONS_KO[tag]}
+                  <GlossaryText text={STYLE_DESCRIPTIONS_KO[tag]} />
                 </p>
               </li>
             ))}
@@ -156,7 +167,7 @@ export default async function WhiskyDetailPage({ params }: PageProps<"/whisky/[i
           <Lightbulb className="mt-0.5 size-5 shrink-0 text-amber-700" aria-hidden />
           <div>
             <h2 className="font-semibold">초보자 팁</h2>
-            <p className="mt-1 text-sm leading-relaxed">{w.beginnerTip}</p>
+            <p className="mt-1 text-sm leading-relaxed"><GlossaryText text={w.beginnerTip} /></p>
           </div>
         </div>
         <div className="flex gap-3 rounded-xl border p-5">

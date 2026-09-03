@@ -7,9 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FlavorBars, TasteBars } from "@/components/whisky/taste-bars";
 import { MatchBadge } from "@/components/whisky/whisky-card";
+import { GlossaryText } from "@/components/whisky/term";
 import { getWhisky } from "@/data/whiskies";
 import type { RecommendationPayload } from "@/lib/ai/recommend";
+import { encodeShare } from "@/lib/share";
 import { createClient } from "@/lib/supabase/server";
+import { ShareButton } from "./share-button";
 import {
   DIFFICULTY_LABELS_KO,
   formatAge,
@@ -111,8 +114,16 @@ export default async function RecommendPage() {
           <h1 className="text-3xl font-bold">
             당신은 <span className="text-amber-700">{payload.tasteTitle}</span>
           </h1>
-          <p className="leading-relaxed text-muted-foreground">{payload.tasteSummary}</p>
+          <p className="leading-relaxed text-muted-foreground"><GlossaryText text={payload.tasteSummary} /></p>
           <div className="flex flex-wrap gap-2 pt-1">
+            <ShareButton
+              title={payload.tasteTitle}
+              query={encodeShare({
+                title: payload.tasteTitle,
+                profile,
+                whiskyIds: payload.picks.map((p) => p.whiskyId),
+              })}
+            />
             <Button variant="outline" size="sm" render={<Link href="/quiz" />}>
               <RefreshCw data-icon="inline-start" />
               다시 진단하기
@@ -179,7 +190,7 @@ export default async function RecommendPage() {
                       <dd>{DIFFICULTY_LABELS_KO[w.difficulty]}</dd>
                     </dl>
 
-                    <p className="text-sm leading-relaxed">{pick.reason}</p>
+                    <p className="text-sm leading-relaxed"><GlossaryText text={pick.reason} /></p>
 
                     <FlavorBars flavor={w.flavor} compact />
 
