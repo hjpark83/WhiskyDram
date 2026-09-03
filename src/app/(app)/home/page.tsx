@@ -37,8 +37,8 @@ const actions = [
     href: "/journal",
     icon: NotebookPen,
     title: "마신 후기 남기기",
-    body: "한 줄만 남겨도 다음 추천이 달라져요.",
-    ready: false,
+    body: "한 줄만 남겨도 취향 프로필이 갱신되고 다음 3병이 달라져요.",
+    ready: true,
   },
 ];
 

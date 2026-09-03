@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AlertTriangle, GlassWater, RefreshCw, Sparkles, Utensils } from "lucide-react";
+import { AlertTriangle, GlassWater, NotebookPen, RefreshCw, Sparkles, Utensils } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +18,7 @@ import {
   TYPE_LABELS_KO,
 } from "@/lib/whisky/format";
 import { matchPercent } from "@/lib/whisky/recommend";
-import { EMPTY_TASTE_PROFILE, type TasteProfile } from "@/lib/whisky/types";
+import { AXIS_LABELS_KO, EMPTY_TASTE_PROFILE, TASTE_AXES, type TasteProfile } from "@/lib/whisky/types";
 
 export const metadata: Metadata = { title: "내 추천" };
 
@@ -54,8 +54,50 @@ export default async function RecommendPage() {
     day: "numeric",
   });
 
+  const basis = payload.basedOn;
+  const basisWhisky = basis ? getWhisky(basis.whiskyId) : null;
+  const deltaChips = basis
+    ? TASTE_AXES.filter((a) => (basis.deltas[a] ?? 0) !== 0).map((a) => ({
+        axis: a,
+        d: basis.deltas[a] as number,
+      }))
+    : [];
+
   return (
     <div className="space-y-10">
+      {basis && basisWhisky && (
+        <section className="rounded-xl border border-amber-600/40 bg-amber-50/60 p-5">
+          <div className="flex items-start gap-3">
+            <NotebookPen className="mt-0.5 size-5 shrink-0 text-amber-700" aria-hidden />
+            <div className="space-y-2">
+              <p className="font-semibold">
+                <Link href={`/whisky/${basisWhisky.id}`} className="underline">
+                  {basisWhisky.nameKo}
+                </Link>{" "}
+                후기({"★".repeat(basis.rating)}{"☆".repeat(5 - basis.rating)})를 반영했어요
+              </p>
+              <p className="text-sm text-muted-foreground">{basis.summary}</p>
+              <p className="text-sm leading-relaxed">{basis.explanation}</p>
+              {deltaChips.length > 0 && (
+                <ul className="flex flex-wrap gap-1.5 pt-1">
+                  {deltaChips.map(({ axis, d }) => (
+                    <li
+                      key={axis}
+                      className={
+                        "rounded-full px-2 py-0.5 text-xs font-medium " +
+                        (d > 0 ? "bg-amber-600 text-white" : "bg-slate-200 text-slate-800")
+                      }
+                    >
+                      {AXIS_LABELS_KO[axis]} {d > 0 ? `+${d}` : d}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
       <section className="grid gap-6 md:grid-cols-[1.2fr_1fr]">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -76,6 +118,10 @@ export default async function RecommendPage() {
             </Button>
             <Button variant="ghost" size="sm" render={<Link href="/whisky" />}>
               내 취향으로 전체 탐색
+            </Button>
+            <Button variant="ghost" size="sm" render={<Link href="/journal" />}>
+              <NotebookPen data-icon="inline-start" />
+              마신 후기 남기기
             </Button>
           </div>
         </div>

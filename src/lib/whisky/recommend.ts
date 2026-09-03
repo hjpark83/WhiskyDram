@@ -16,10 +16,12 @@ import {
 // 취향 프로필 계산
 // ---------------------------------------------------------------------------
 
+/** -2..+2 로 자르고 소수점 한 자리로 정리 (후기 누적이 조금씩 반영되게 정수로 반올림하지 않아요) */
 export function clampProfile(p: TasteProfile): TasteProfile {
   const out = { ...p };
   for (const axis of TASTE_AXES) {
-    out[axis] = Math.max(-2, Math.min(2, Math.round(out[axis] ?? 0)));
+    const v = Math.max(-2, Math.min(2, out[axis] ?? 0));
+    out[axis] = Math.round(v * 10) / 10;
   }
   return out;
 }
@@ -37,7 +39,7 @@ export function profileFromAnswers(answers: QuizAnswers): TasteProfile {
   }
   // 여러 질문이 같은 축을 건드리니 합이 ±4까지 갈 수 있어요. 절반으로 눌러 -2..+2로.
   for (const axis of TASTE_AXES) {
-    raw[axis] = raw[axis] / 2;
+    raw[axis] = Math.round(raw[axis] / 2);
   }
   return clampProfile(raw);
 }
@@ -57,6 +59,26 @@ export function applyDeltas(
     if (typeof d === "number") out[axis] = out[axis] + d * weight;
   }
   return clampProfile(out);
+}
+
+/**
+ * 별점만으로 계산하는 규칙 기반 델타 (AI 폴백 / 후보 선별용 임시 프로필).
+ * 그 병에서 두드러진 축(향미 4~5)만 움직여요. 좋았으면 그쪽으로, 별로였으면 반대로.
+ * 약한 축(예: 라프로익의 단맛)은 "그게 없어서 좋았다"는 근거가 못 되니 건드리지 않아요.
+ */
+export function ruleDeltasFromNote(whisky: Whisky, rating: number): Partial<TasteProfile> {
+  const direction = (rating - 3) / 2; // -1..+1
+  const out: Partial<TasteProfile> = {};
+  if (direction === 0) return out;
+  for (const axis of TASTE_AXES) {
+    const f = whisky.flavor[axis];
+    const strength = f >= 5 ? 2 : f >= 4 ? 1 : 0;
+    if (strength === 0) continue;
+    const raw = direction * strength;
+    const d = Math.sign(raw) * Math.round(Math.abs(raw));
+    if (d !== 0) out[axis] = Math.max(-2, Math.min(2, d));
+  }
+  return out;
 }
 
 export function hasProfile(profile: Partial<TasteProfile> | null | undefined) {

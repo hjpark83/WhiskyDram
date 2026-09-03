@@ -26,6 +26,22 @@ export interface RecommendationPick {
   caution: string | null;
 }
 
+/** 후기 기반 재추천일 때, 어떤 후기를 어떻게 반영했는지 */
+export interface RecommendationBasis {
+  source: "review";
+  noteId: string | null;
+  whiskyId: string;
+  rating: number;
+  review: string;
+  summary: string;
+  liked: string[];
+  disliked: string[];
+  deltas: Partial<TasteProfile>;
+  explanation: string;
+  profileBefore: TasteProfile;
+  profileAfter: TasteProfile;
+}
+
 export interface RecommendationPayload {
   tasteTitle: string;
   tasteSummary: string;
@@ -33,6 +49,7 @@ export interface RecommendationPayload {
   nextStep: string;
   generatedBy: "claude" | "fallback";
   model: string | null;
+  basedOn?: RecommendationBasis;
 }
 
 // ---------------------------------------------------------------------------
@@ -50,7 +67,7 @@ const SYSTEM_PROMPT = `당신은 위스키를 처음 시작하는 한국인을 �
 - 과장하지 않아요. 가격은 후보에 적힌 범위를 그대로 말해요.
 - 각 필드는 짧게. reason 은 2~3문장, 나머지는 1~2문장.`;
 
-function profileText(profile: TasteProfile): string {
+export function profileText(profile: TasteProfile): string {
   const axes = TASTE_AXES.map(
     (a) => `${AXIS_LABELS_KO[a]}: ${profile[a] > 0 ? "+" : ""}${profile[a]}`,
   ).join(", ");
@@ -64,7 +81,7 @@ function answersText(answers: QuizAnswers): string {
   }).join("\n");
 }
 
-function whiskyCard(w: Whisky, percent: number | null): string {
+export function whiskyCard(w: Whisky, percent: number | null): string {
   const flavor = TASTE_AXES.map((a) => `${AXIS_LABELS_KO[a]} ${w.flavor[a]}`).join(", ");
   return [
     `[${w.id}] ${w.nameKo} (${w.name})`,
@@ -190,7 +207,7 @@ export async function generateQuizRecommendation(
 // 폴백 (API 키 없음 / 오류) — 데모가 절대 멈추지 않게
 // ---------------------------------------------------------------------------
 
-function templatePick(w: Whisky): RecommendationPick {
+export function templatePick(w: Whisky): RecommendationPick {
   const highball = w.priceKrw[1] <= 60000 || w.flavor.body <= 1;
   return {
     whiskyId: w.id,
@@ -209,7 +226,7 @@ function templatePick(w: Whisky): RecommendationPick {
   };
 }
 
-function titleFor(profile: TasteProfile): string {
+export function titleFor(profile: TasteProfile): string {
   if (profile.peat >= 1) return "은은한 불맛 탐험가";
   if (profile.sweet >= 1 && profile.fruit >= 1) return "달콤한 과일파";
   if (profile.sweet >= 1) return "부드러운 단맛파";

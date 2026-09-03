@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Lightbulb, MapPin, Utensils } from "lucide-react";
+import { ArrowLeft, Lightbulb, MapPin, NotebookPen, Utensils } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,10 +74,16 @@ export default async function WhiskyDetailPage({ params }: PageProps<"/whisky/[i
 
   return (
     <div className="space-y-8">
-      <Button variant="ghost" size="sm" render={<Link href="/whisky" />}>
-        <ArrowLeft data-icon="inline-start" />
-        위스키 탐색
-      </Button>
+      <div className="flex items-center justify-between gap-2">
+        <Button variant="ghost" size="sm" render={<Link href="/whisky" />}>
+          <ArrowLeft data-icon="inline-start" />
+          위스키 탐색
+        </Button>
+        <Button size="sm" render={<Link href={`/journal?whisky=${w.id}`} />}>
+          <NotebookPen data-icon="inline-start" />
+          이 병 후기 남기기
+        </Button>
+      </div>
 
       <header className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
