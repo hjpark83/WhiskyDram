@@ -56,6 +56,24 @@ export type Region =
   | "Japan"
   | "Other";
 
+/**
+ * 스타일 태그 — 초보자가 "이 병은 어떤 느낌인지" 한눈에 보게 하는 분류.
+ * 캐스크(숙성 통) 종류와 대표 특징을 섞어 쓰되, 한 병에 여러 개 붙을 수 있어요.
+ */
+export const STYLE_TAGS = [
+  "sherry", // 셰리 캐스크 — 건포도·초콜릿 같은 진한 단맛
+  "peated", // 피트 — 모닥불 연기 향
+  "bourbon_cask", // 버번 캐스크 — 바닐라·꿀, 가볍고 부드러움
+  "wine_cask", // 와인·포트 캐스크 — 베리 잼 같은 단맛
+  "high_proof", // 고도수 — 50% 이상
+  "highball", // 하이볼용 — 탄산수에 섞기 좋은 가벼운 병
+] as const;
+
+export type StyleTag = (typeof STYLE_TAGS)[number];
+
+/** 원산지 분류 (country 에서 파생) */
+export type Origin = "scotch" | "irish" | "japanese" | "american" | "korean" | "other";
+
 export interface Whisky {
   id: string; // slug, e.g. "glenmorangie-10"
   name: string; // English
@@ -64,6 +82,7 @@ export interface Whisky {
   region: Region;
   country: string;
   type: WhiskyType;
+  styles: StyleTag[];
   abv: number;
   age: number | null; // null = NAS (No Age Statement)
   priceKrw: [min: number, max: number]; // 국내 대략적 소비자가 범위

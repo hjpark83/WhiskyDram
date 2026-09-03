@@ -47,7 +47,8 @@ npm run dev
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
-| `ANTHROPIC_API_KEY` | Anthropic API 키 |
+| `ANTHROPIC_API_KEY` | Anthropic API 키 (없으면 AI 없이 규칙 기반 추천으로 폴백) |
+| `ANTHROPIC_MODEL` | (선택) 기본 `claude-opus-5` |
 | `NEXT_PUBLIC_SITE_URL` | 인증 리다이렉트용 사이트 URL |
 
 ### Supabase 세팅
@@ -66,11 +67,18 @@ src/
 │   ├── login/                # 로그인/회원가입 (Server Actions)
 │   ├── auth/                 # OAuth 콜백, 로그아웃
 │   └── (app)/                # 로그인 필요 영역 (공통 헤더)
-│       └── home/
+│       ├── home/             # 대시보드 (취향 프로필 + 최근 추천)
+│       ├── quiz/             # 취향 진단 (7문항) → Server Action → Claude
+│       ├── recommend/        # 최근 추천 결과
+│       └── whisky/           # 위스키 탐색 목록 + 상세 [id]
+├── data/
+│   ├── whiskies.ts           # 위스키 사전 (정적)
+│   └── quiz.ts               # 진단 질문 + 축 델타
 ├── components/ui/            # shadcn
 ├── lib/
+│   ├── ai/                   # Anthropic 클라이언트, 추천 사유 생성 (structured output)
 │   ├── supabase/             # browser / server / proxy 클라이언트
-│   └── whisky/types.ts       # 도메인 타입
+│   └── whisky/               # 도메인 타입, 추천 점수 계산, 포맷 헬퍼
 └── proxy.ts                  # 세션 갱신 + 보호 라우트 리다이렉트
 supabase/schema.sql           # DB 스키마 (profiles, tasting_notes, recommendations)
 ```
@@ -78,8 +86,8 @@ supabase/schema.sql           # DB 스키마 (profiles, tasting_notes, recommend
 ## 로드맵
 
 - [x] P0 · 프로젝트 세팅, 인증, 배포 파이프라인
-- [ ] P0 · 위스키 사전 데이터 (60~80병)
-- [ ] P0 · 취향 진단 → AI 추천
+- [x] P0 · 위스키 사전 데이터 (312병, `src/data/whiskies.ts`)
+- [x] P0 · 취향 진단 → AI 추천 (`/quiz` → `/recommend`) + 위스키 탐색 (`/whisky`)
 - [ ] P1 · 병 스캔 (비전)
 - [ ] P1 · 테이스팅 노트 → 취향 갱신 → 재추천
 - [ ] P2 · 증류소 지도, 용어 사전, 랜딩 다듬기, 데모 영상
