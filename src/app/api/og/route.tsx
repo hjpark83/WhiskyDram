@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
   const axisLabels = TASTE_AXES.map((a) => AXIS_LABELS_KO[a]);
 
   const textForFont = [
-    "나는 FirstDram AI 위스키 취향 진단 추천받은 첫 위스키 1분 진단 ",
+    "나는 FirstDram AI 위스키 취향 진단 추천받은 첫 위스키 커피·디저트 취향만 답하면 1분 진단 “” ",
     title,
     ...lines,
     ...whiskies.map((w) => w.nameKo),

@@ -15,7 +15,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <>
       <SiteHeader email={user.email ?? null} />
-      <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">{children}</div>
+      <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 pb-24 sm:py-8">{children}</div>
     </>
   );
 }
