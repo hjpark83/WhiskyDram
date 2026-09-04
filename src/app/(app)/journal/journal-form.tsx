@@ -1,11 +1,13 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Search, Sparkles, Star, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { BottlingLoader } from "@/components/whisky/bottling-loader";
 import { cn } from "@/lib/utils";
 import { submitTastingNote } from "./actions";
 
@@ -38,6 +40,9 @@ export function JournalForm({
   const [hover, setHover] = useState(0);
   const [review, setReview] = useState("");
   const [pending, startTransition] = useTransition();
+  const [phase, setPhase] = useState<"idle" | "loading" | "done">("idle");
+  const router = useRouter();
+  const goResult = useCallback(() => router.push("/recommend"), [router]);
 
   const selected = useMemo(
     () => whiskies.find((w) => w.id === whiskyId) ?? null,
@@ -58,18 +63,27 @@ export function JournalForm({
 
   function submit() {
     if (!whiskyId || !canSubmit) return;
+    setPhase("loading");
     startTransition(async () => {
       const result = await submitTastingNote({ whiskyId, rating, review });
-      if (result?.error) toast.error(result.error);
+      if ("error" in result) {
+        toast.error(result.error);
+        setPhase("idle");
+        return;
+      }
+      setPhase("done");
     });
   }
 
-  if (pending) {
+  if (pending || phase !== "idle") {
     return (
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-center">
-        <Sparkles className="size-8 animate-pulse text-amber-600" aria-hidden />
-        <p className="text-lg font-semibold">후기를 읽고 취향을 다시 계산하는 중…</p>
-        <p className="text-sm text-muted-foreground">다음 3병까지 함께 골라요. 보통 10초 안에 끝나요.</p>
+        <BottlingLoader
+          done={phase === "done"}
+          lines={["후기를 읽는 중…", "취향 프로필을 다시 계산하는 중…", "다음 3병을 고르는 중…"]}
+          onComplete={goResult}
+        />
+        <p className="text-sm text-muted-foreground">보통 10초 안에 끝나요.</p>
       </div>
     );
   }
@@ -80,7 +94,7 @@ export function JournalForm({
       <section className="space-y-2">
         <h2 className="font-semibold">1. 어떤 위스키를 마셨나요?</h2>
         {selected ? (
-          <div className="flex items-center justify-between rounded-xl border border-amber-600 bg-amber-50 px-4 py-3">
+          <div className="flex items-center justify-between rounded-xl border border-amber-400 bg-amber-500/10 px-4 py-3">
             <div>
               <p className="font-semibold">{selected.nameKo}</p>
               <p className="text-xs text-muted-foreground">
@@ -93,7 +107,7 @@ export function JournalForm({
                 setWhiskyId(null);
                 setQuery("");
               }}
-              className="rounded-full p-1 text-muted-foreground hover:bg-amber-100"
+              className="rounded-full p-1 text-muted-foreground hover:bg-amber-500/20"
               aria-label="다른 위스키 선택"
             >
               <X className="size-4" />
@@ -121,7 +135,7 @@ export function JournalForm({
                     <button
                       type="button"
                       onClick={() => setWhiskyId(w.id)}
-                      className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm hover:bg-amber-50"
+                      className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm hover:bg-amber-500/10"
                     >
                       <span className="font-medium">{w.nameKo}</span>
                       <span className="text-xs text-muted-foreground">{w.name}</span>

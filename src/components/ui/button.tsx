@@ -44,11 +44,15 @@ function Button({
   className,
   variant = "default",
   size = "default",
+  nativeButton,
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+  // render={<Link />} 처럼 <button> 이 아닌 요소로 그릴 땐 Base UI 에 알려줘요 (경고·접근성).
+  const isNative = nativeButton ?? props.render === undefined
   return (
     <ButtonPrimitive
       data-slot="button"
+      nativeButton={isNative}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />

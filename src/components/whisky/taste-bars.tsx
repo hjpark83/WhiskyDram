@@ -27,7 +27,7 @@ export function TasteBars({
               <span
                 className={cn(
                   "absolute top-0 h-full rounded-full",
-                  v >= 0 ? "left-1/2 bg-amber-600" : "right-1/2 bg-slate-400",
+                  v >= 0 ? "left-1/2 bg-amber-500" : "right-1/2 bg-stone-500",
                 )}
                 style={{ width: `${pct}%` }}
               />
@@ -73,7 +73,7 @@ export function FlavorBars({
                   key={i}
                   className={cn(
                     "h-2 flex-1 rounded-full",
-                    i < v ? "bg-amber-600" : "bg-muted",
+                    i < v ? "bg-amber-500" : "bg-muted",
                   )}
                 />
               ))}

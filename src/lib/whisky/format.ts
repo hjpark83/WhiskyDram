@@ -145,3 +145,37 @@ export const STYLE_DESCRIPTIONS_KO: Record<StyleTag, string> = {
   high_proof: "알코올 50% 이상. 진하지만 물을 몇 방울 넣으면 향이 활짝 열려요.",
   highball: "탄산수에 섞어 마시기 좋은 가볍고 부담 없는 병. 첫 잔으로 안전해요.",
 };
+
+// ---------------------------------------------------------------------------
+// 위스키 색 (추정) — 통·숙성·종류에서 계산. 사진이 없으니 초보자용 시각 단서로.
+// ---------------------------------------------------------------------------
+
+export type LiquidLevel = 0 | 1 | 2 | 3 | 4;
+
+export const LIQUID_LABELS_KO: Record<LiquidLevel, string> = {
+  0: "연한 금색",
+  1: "황금색",
+  2: "호박색",
+  3: "진한 호박색",
+  4: "마호가니",
+};
+
+const LIQUID_HEX: Record<LiquidLevel, string> = {
+  0: "#f2dc8a",
+  1: "#e6b84f",
+  2: "#cf8a2a",
+  3: "#a95f1c",
+  4: "#6e3a12",
+};
+
+export function liquidColor(w: Whisky): { hex: string; level: LiquidLevel } {
+  let score = w.flavor.oak * 0.5; // 0..2.5
+  if (w.styles.includes("sherry")) score += 1.8;
+  if (w.styles.includes("wine_cask")) score += 1.2;
+  if (w.styles.includes("bourbon_cask")) score -= 0.6;
+  if (w.type === "bourbon" || w.type === "rye") score += 1.2; // 새 오크통
+  if (w.age !== null) score += Math.min(w.age, 25) / 10; // 0..2.5
+  else score += 0.4;
+  const level = (score < 1.2 ? 0 : score < 2.2 ? 1 : score < 3.2 ? 2 : score < 4.4 ? 3 : 4) as LiquidLevel;
+  return { hex: LIQUID_HEX[level], level };
+}

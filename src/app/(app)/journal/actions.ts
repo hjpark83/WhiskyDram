@@ -22,7 +22,7 @@ const inputSchema = z.object({
 });
 
 export type SubmitNoteInput = z.infer<typeof inputSchema>;
-export type SubmitNoteResult = { error: string } | undefined;
+export type SubmitNoteResult = { error: string } | { ok: true };
 
 export async function submitTastingNote(raw: SubmitNoteInput): Promise<SubmitNoteResult> {
   const parsed = inputSchema.safeParse(raw);
@@ -134,5 +134,5 @@ export async function submitTastingNote(raw: SubmitNoteInput): Promise<SubmitNot
     return { error: "추천을 저장하지 못했어요." };
   }
 
-  redirect("/recommend");
+  return { ok: true };
 }

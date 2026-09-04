@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useCallback, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { BottlingLoader } from "@/components/whisky/bottling-loader";
 import { cn } from "@/lib/utils";
 import { QUIZ_QUESTIONS, type QuizAnswers } from "@/data/quiz";
 import { WHISKIES } from "@/data/whiskies";
@@ -20,7 +22,9 @@ export function QuizForm({ initialAnswers }: { initialAnswers?: QuizAnswers }) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<QuizAnswers>(initialAnswers ?? {});
   const [pending, startTransition] = useTransition();
-  const [loadingIdx, setLoadingIdx] = useState(0);
+  const [phase, setPhase] = useState<"idle" | "loading" | "done">("idle");
+  const router = useRouter();
+  const goResult = useCallback(() => router.push("/recommend"), [router]);
 
   const total = QUIZ_QUESTIONS.length;
   const q = QUIZ_QUESTIONS[step];
@@ -41,26 +45,22 @@ export function QuizForm({ initialAnswers }: { initialAnswers?: QuizAnswers }) {
       toast.error("아직 답하지 않은 질문이 있어요.");
       return;
     }
-    setLoadingIdx(0);
-    const timer = window.setInterval(
-      () => setLoadingIdx((i) => Math.min(LOADING_LINES.length - 1, i + 1)),
-      2500,
-    );
+    setPhase("loading");
     startTransition(async () => {
-      try {
-        const result = await submitQuiz(answers);
-        if (result?.error) toast.error(result.error);
-      } finally {
-        window.clearInterval(timer);
+      const result = await submitQuiz(answers);
+      if ("error" in result) {
+        toast.error(result.error);
+        setPhase("idle");
+        return;
       }
+      setPhase("done");
     });
   }
 
-  if (pending) {
+  if (pending || phase !== "idle") {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-center">
-        <Sparkles className="size-8 animate-pulse text-amber-600" aria-hidden />
-        <p className="text-lg font-semibold">{LOADING_LINES[loadingIdx]}</p>
+        <BottlingLoader done={phase === "done"} lines={LOADING_LINES} onComplete={goResult} />
         <p className="text-sm text-muted-foreground">보통 10초 안에 끝나요.</p>
       </div>
     );
@@ -94,9 +94,9 @@ export function QuizForm({ initialAnswers }: { initialAnswers?: QuizAnswers }) {
                 aria-pressed={active}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-xl border p-4 text-left transition-all",
-                  "hover:border-amber-600/60 hover:bg-amber-50/50 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                  "hover:border-amber-400/60 hover:bg-amber-500/10 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                   active
-                    ? "border-amber-600 bg-amber-50 shadow-sm"
+                    ? "border-amber-400 bg-amber-500/10 shadow-sm"
                     : "border-border bg-card",
                 )}
               >

@@ -9,7 +9,8 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-serif);
+  --font-brand: var(--font-brand);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -49,82 +50,166 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* 위스키 바: 호두나무 어둠 + 호박색 조명 + 황동 */
+  color-scheme: dark;
+  --background: #1a120c;
+  --foreground: #f3e7d3;
+  --card: #24190f;
+  --card-foreground: #f3e7d3;
+  --popover: #2b1d13;
+  --popover-foreground: #f3e7d3;
+  --primary: #d9a441;
+  --primary-foreground: #1a120c;
+  --secondary: #3a2a1c;
+  --secondary-foreground: #f3e7d3;
+  --muted: #2e2117;
+  --muted-foreground: #b8a58d;
+  --accent: #3a2a1c;
+  --accent-foreground: #f3e7d3;
+  --destructive: #e0604f;
+  --border: rgba(217, 164, 65, 0.22);
+  --input: rgba(217, 164, 65, 0.28);
+  --ring: #d9a441;
+  --chart-1: #d9a441;
+  --chart-2: #b08a4a;
+  --chart-3: #8a2f3a;
+  --chart-4: #3f6b4f;
+  --chart-5: #f3e7d3;
+  --radius: 0.5rem;
+  --sidebar: #24190f;
+  --sidebar-foreground: #f3e7d3;
+  --sidebar-primary: #d9a441;
+  --sidebar-primary-foreground: #1a120c;
+  --sidebar-accent: #3a2a1c;
+  --sidebar-accent-foreground: #f3e7d3;
+  --sidebar-border: rgba(217, 164, 65, 0.22);
+  --sidebar-ring: #d9a441;
+  --brass: #c9a24f;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
   html {
     @apply font-sans;
   }
+  body {
+    @apply bg-background text-foreground;
+  }
+  /* 종이·가죽 질감 (아주 은은한 노이즈) */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.03;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+  h1, h2, h3 {
+    font-family: var(--font-heading), serif;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+  }
+  h1 {
+    font-weight: 500;
+  }
+  ::selection {
+    background: rgba(217, 164, 65, 0.35);
+  }
 }
+
+@layer components {
+  .brand {
+    font-family: var(--font-brand), var(--font-heading), serif;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+  /* 지구본 위에 띄우는 유리판 */
+  .glass {
+    background: rgba(26, 18, 12, 0.78);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(217, 164, 65, 0.22);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  }
+  /* 헤더·구분선용 황동 라인 */
+  .brass-line {
+    background: linear-gradient(90deg, transparent, rgba(217, 164, 65, 0.7), transparent);
+    height: 1px;
+  }
+  .glow-amber {
+    box-shadow: 0 0 0 1px rgba(217, 164, 65, 0.35), 0 8px 30px rgba(217, 164, 65, 0.18);
+  }
+}
+
+/* 조명이 스치는 제목 */
+@keyframes shine {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.text-shine {
+  background: linear-gradient(100deg, #f3e7d3 0%, #f3e7d3 40%, #ffe6a8 50%, #f3e7d3 60%, #f3e7d3 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shine 7s linear infinite;
+}
+
+/* ---------------------------------------------------------------------------
+   지구본 HTML 마커 (globe-view.tsx). CSS2DRenderer 가 루트 transform 을 쓰므로
+   스타일은 안쪽 요소에만 줘요.
+   --------------------------------------------------------------------------- */
+.globe-marker { pointer-events: auto; cursor: pointer; }
+.globe-cluster-inner {
+  display: flex; align-items: center; gap: 0.4rem;
+  padding: 0.4rem 0.8rem; border-radius: 999px; white-space: nowrap;
+  background: rgba(26, 18, 12, 0.86); color: #f3e7d3; font-size: 12px; font-weight: 500;
+  border: 1px solid rgba(217, 164, 65, 0.65);
+  box-shadow: 0 0 0 5px rgba(217, 164, 65, 0.12), 0 8px 24px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.globe-cluster-inner b { color: #f0c96a; font-weight: 600; }
+.globe-cluster-inner small { color: #b8a58d; font-size: 11px; }
+.globe-marker:hover .globe-cluster-inner {
+  transform: scale(1.06); border-color: #f0c96a;
+  box-shadow: 0 0 0 7px rgba(217, 164, 65, 0.18), 0 10px 28px rgba(0, 0, 0, 0.5);
+}
+.globe-pin-inner {
+  position: relative; width: 36px; height: 36px; border-radius: 999px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(26, 18, 12, 0.88); color: #e8b850;
+  border: 1.5px solid rgba(217, 164, 65, 0.75);
+  box-shadow: 0 0 14px rgba(217, 164, 65, 0.35);
+  transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.globe-pin-inner svg { width: 19px; height: 19px; }
+.globe-pin-inner::after {
+  content: attr(data-label); position: absolute; top: 100%; left: 50%;
+  transform: translate(-50%, 5px); white-space: nowrap; font-size: 11px; font-weight: 500;
+  color: #f3e7d3; background: rgba(26, 18, 12, 0.9); padding: 2px 7px; border-radius: 6px;
+  border: 1px solid rgba(217, 164, 65, 0.3);
+  opacity: 0; transition: opacity 0.15s ease; pointer-events: none;
+}
+.globe-marker:hover .globe-pin-inner, .globe-marker.is-selected .globe-pin-inner {
+  transform: scale(1.22); background: #d9a441; color: #1a120c; border-color: #fff8e6;
+}
+.globe-marker:hover .globe-pin-inner::after, .globe-marker.is-selected .globe-pin-inner::after { opacity: 1; }
+.globe-marker.is-dim .globe-pin-inner { opacity: 0.55; }
+/* 가까이 확대하면 핀을 작게 (스페이사이드처럼 빽빽한 곳) */
+.is-close .globe-pin-inner { width: 26px; height: 26px; }
+.is-close .globe-pin-inner svg { width: 14px; height: 14px; }
+
+/* 병입 로딩 애니메이션 */
+@keyframes bl-flow { to { stroke-dashoffset: -36; } }
+@keyframes bl-stream { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+@keyframes bl-surface { 0%, 100% { transform: translateX(-1.5px); } 50% { transform: translateX(1.5px); } }
+@keyframes bl-ring { from { transform: scale(0.6); opacity: 0.9; } to { transform: scale(1.6); opacity: 0; } }
+.bl-flow { animation: bl-flow 0.6s linear infinite; }
+.bl-stream { animation: bl-stream 0.5s ease-in-out infinite; }
+.bl-surface { animation: bl-surface 1.2s ease-in-out infinite; }
+.bl-ring { transform-origin: 239px 140px; transform-box: view-box; animation: bl-ring 0.9s ease-out forwards; }

@@ -166,17 +166,20 @@ export function getDistilleries(): Distillery[] {
       whiskies: [w],
     });
   }
-  // 겹치는 좌표 분산
-  const seen = new Map<string, number>();
+  // 거의 같은 자리(더프타운의 글렌피딕·발베니·몰트락 등)는 작은 원으로 벌려요.
   const list = [...map.values()];
-  for (const d of list) {
-    const key = `${d.lat},${d.lng}`;
-    const n = seen.get(key) ?? 0;
-    if (n > 0) {
-      d.lat += 0.06 * n;
-      d.lng += 0.08 * n;
+  for (let i = 0; i < list.length; i++) {
+    let bumps = 0;
+    for (let j = 0; j < i; j++) {
+      const dl = list[i].lat - list[j].lat;
+      const dg = list[i].lng - list[j].lng;
+      if (Math.hypot(dl, dg) < 0.03) bumps++;
     }
-    seen.set(key, n + 1);
+    if (bumps > 0) {
+      const ang = bumps * 1.7;
+      list[i].lat += Math.sin(ang) * 0.028 * bumps;
+      list[i].lng += Math.cos(ang) * 0.04 * bumps;
+    }
   }
   cache = list;
   return list;

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Camera, Compass, Globe2, NotebookPen, Search, Sparkles } from "lucide-react";
+import { Camera, Compass, Globe2, MessageCircle, NotebookPen, Search, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,6 +17,13 @@ const actions = [
     icon: Compass,
     title: "취향 진단하기",
     body: "1분이면 끝나요. 내 첫 위스키 3병을 추천받으세요.",
+    ready: true,
+  },
+  {
+    href: "/chat",
+    icon: MessageCircle,
+    title: "AI 소믈리에에게 묻기",
+    body: "“삼겹살에 뭐 마시지?” 같은 질문에 사전에서 찾아 답해요.",
     ready: true,
   },
   {
@@ -102,7 +109,7 @@ export default async function HomePage() {
                 내 취향
               </Badge>
               <p className="text-xl font-bold">
-                당신은 <span className="text-amber-700">{payload.tasteTitle}</span>
+                당신은 <span className="text-amber-400">{payload.tasteTitle}</span>
               </p>
               <TasteBars profile={profile} />
             </CardContent>
@@ -115,7 +122,7 @@ export default async function HomePage() {
                   <li key={w.id}>
                     <Link
                       href={`/whisky/${w.id}`}
-                      className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm transition-colors hover:border-amber-600/60"
+                      className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm transition-colors hover:border-amber-400/60"
                     >
                       <span className="font-medium">{w.nameKo}</span>
                       <span className="text-xs text-muted-foreground">{w.name}</span>
@@ -140,9 +147,9 @@ export default async function HomePage() {
         {actions.map(({ href, icon: Icon, title, body, ready }) =>
           ready ? (
             <Link key={href} href={href} className="group">
-              <Card className="h-full transition-colors group-hover:border-amber-600/60">
+              <Card className="h-full transition-colors group-hover:border-amber-400/60">
                 <CardContent className="space-y-3 p-6">
-                  <Icon className="size-6 text-amber-700" aria-hidden />
+                  <Icon className="size-6 text-amber-400" aria-hidden />
                   <h2 className="font-semibold">{title}</h2>
                   <p className="text-sm text-muted-foreground">{body}</p>
                 </CardContent>

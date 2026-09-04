@@ -54,20 +54,6 @@ export default async function MapPage() {
     };
   });
 
-  return (
-    <div className="space-y-4">
-      <section className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-bold">증류소 지도</h1>
-          <p className="mt-1 text-muted-foreground">
-            지구본을 돌려 {distilleries.length}곳의 증류소를 찾아보세요. 점을 누르면 그곳에서 만드는 병이 나와요.
-            {profile
-              ? " 점 색이 진할수록 내 취향과 잘 맞는 증류소예요."
-              : " 취향 진단을 하면 점 색이 내 취향 적합도로 바뀌어요."}
-          </p>
-        </div>
-      </section>
-      <GlobeView distilleries={distilleries} personalized={Boolean(profile)} />
-    </div>
-  );
+  // 지구본은 헤더 아래 화면 전체를 차지해요 (fixed). 페이지 흐름에는 아무것도 두지 않아요.
+  return <GlobeView distilleries={distilleries} personalized={Boolean(profile)} />;
 }
