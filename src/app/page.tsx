@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LiquidSwatch } from "@/components/whisky/liquid-swatch";
 import { TasteBars } from "@/components/whisky/taste-bars";
-import { WhiskyGlass } from "@/components/whisky/whisky-glass";
+import { WhiskyGlass3D } from "@/components/whisky/whisky-glass-3d";
 import { getDistilleries } from "@/data/distilleries";
 import { GLOSSARY } from "@/data/glossary";
 import { getWhiskies, WHISKIES } from "@/data/whiskies";
@@ -107,7 +107,7 @@ export default function LandingPage() {
 
         {/* 조명 아래 잔 + 예시 결과 카드 */}
         <div className="relative flex flex-col items-center">
-          <WhiskyGlass size={210} className="animate-in fade-in zoom-in-95 duration-1000" />
+          <WhiskyGlass3D size={210} className="animate-in fade-in zoom-in-95 duration-1000" />
           <Card className="animate-in fade-in slide-in-from-bottom-6 -mt-3 w-full gap-0 overflow-hidden border-amber-400/40 py-0 shadow-lg glow-amber duration-700 delay-150">
           <div className="rounded-t-xl bg-amber-500 px-5 py-4 text-amber-950">
             <p className="flex items-center gap-1.5 text-xs opacity-90">

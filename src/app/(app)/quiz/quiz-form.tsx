@@ -5,7 +5,7 @@ import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { WhiskyGlass } from "@/components/whisky/whisky-glass";
+import { WhiskyGlass3D } from "@/components/whisky/whisky-glass-3d";
 import { cn } from "@/lib/utils";
 import { QUIZ_QUESTIONS, type QuizAnswers } from "@/data/quiz";
 import { WHISKIES } from "@/data/whiskies";
@@ -60,7 +60,7 @@ export function QuizForm({ initialAnswers }: { initialAnswers?: QuizAnswers }) {
   if (pending) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-center">
-        <WhiskyGlass size={150} />
+        <WhiskyGlass3D size={150} />
         <p className="text-lg font-semibold">{LOADING_LINES[loadingIdx]}</p>
         <p className="text-sm text-muted-foreground">보통 10초 안에 끝나요.</p>
       </div>

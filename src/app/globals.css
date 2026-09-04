@@ -96,11 +96,6 @@
   }
   body {
     @apply bg-background text-foreground;
-    /* 백바 위 스포트라이트 */
-    background-image:
-      radial-gradient(ellipse 70% 45% at 50% -5%, rgba(217, 164, 65, 0.16), transparent 65%),
-      radial-gradient(ellipse 40% 30% at 100% 100%, rgba(138, 47, 58, 0.12), transparent 70%);
-    background-attachment: fixed;
   }
   /* 종이·가죽 질감 (아주 은은한 노이즈) */
   body::after {
@@ -148,46 +143,6 @@
   .glow-amber {
     box-shadow: 0 0 0 1px rgba(217, 164, 65, 0.35), 0 8px 30px rgba(217, 164, 65, 0.18);
   }
-}
-
-/* ---------------------------------------------------------------------------
-   위스키 잔 애니메이션 (components/whisky/whisky-glass.tsx)
-   --------------------------------------------------------------------------- */
-@keyframes wg-slosh {
-  0%, 100% { transform: rotate(-2.2deg); }
-  50% { transform: rotate(2.2deg); }
-}
-@keyframes wg-wave {
-  from { transform: translateX(0); }
-  to { transform: translateX(-200px); }
-}
-@keyframes wg-ice {
-  0%, 100% { transform: translate(0, 0) rotate(0deg); }
-  50% { transform: translate(1.5px, -3px) rotate(4deg); }
-}
-@keyframes wg-glint {
-  0%, 100% { opacity: 0.15; }
-  50% { opacity: 0.8; }
-}
-@keyframes wg-sweep {
-  0% { transform: skewX(-15deg) translateX(0); opacity: 0; }
-  10% { opacity: 1; }
-  60% { opacity: 1; }
-  100% { transform: skewX(-15deg) translateX(320px); opacity: 0; }
-}
-@keyframes wg-light {
-  0%, 100% { opacity: 0.75; }
-  50% { opacity: 1; }
-}
-.glass-slosh { animation: wg-slosh 4.2s ease-in-out infinite; }
-.glass-wave { animation: wg-wave 3s linear infinite; }
-.glass-ice { animation: wg-ice 5s ease-in-out infinite; }
-.glass-glint { animation: wg-glint 3.6s ease-in-out infinite; }
-.glass-glint-2 { animation-delay: 1.4s; }
-.glass-sweep { animation: wg-sweep 6s ease-in-out infinite; animation-delay: 1s; }
-.glass-light { animation: wg-light 5s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) {
-  .glass-slosh, .glass-wave, .glass-ice, .glass-glint, .glass-sweep, .glass-light { animation: none; }
 }
 
 /* 조명이 스치는 제목 */

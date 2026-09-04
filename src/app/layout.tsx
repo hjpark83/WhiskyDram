@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans_KR, Hahmlet, Cormorant_Garamond, Geist_Mono } from "next/font/google";
+import { AmbientLight } from "@/components/ambient-light";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${plexSansKr.variable} ${hahmlet.variable} ${cormorant.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <AmbientLight />
         {children}
         <Toaster richColors position="top-center" />
       </body>

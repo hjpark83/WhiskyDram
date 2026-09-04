@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { WhiskyGlass } from "@/components/whisky/whisky-glass";
+import { WhiskyGlass3D } from "@/components/whisky/whisky-glass-3d";
 import { cn } from "@/lib/utils";
 import { submitTastingNote } from "./actions";
 
@@ -68,7 +68,7 @@ export function JournalForm({
   if (pending) {
     return (
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-center">
-        <WhiskyGlass size={150} />
+        <WhiskyGlass3D size={150} />
         <p className="text-lg font-semibold">후기를 읽고 취향을 다시 계산하는 중…</p>
         <p className="text-sm text-muted-foreground">다음 3병까지 함께 골라요. 보통 10초 안에 끝나요.</p>
       </div>
