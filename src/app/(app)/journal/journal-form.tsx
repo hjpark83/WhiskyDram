@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Search, Sparkles, Star, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { WhiskyGlass3D } from "@/components/whisky/whisky-glass-3d";
+import { BottlingLoader } from "@/components/whisky/bottling-loader";
 import { cn } from "@/lib/utils";
 import { submitTastingNote } from "./actions";
 
@@ -39,6 +40,9 @@ export function JournalForm({
   const [hover, setHover] = useState(0);
   const [review, setReview] = useState("");
   const [pending, startTransition] = useTransition();
+  const [phase, setPhase] = useState<"idle" | "loading" | "done">("idle");
+  const router = useRouter();
+  const goResult = useCallback(() => router.push("/recommend"), [router]);
 
   const selected = useMemo(
     () => whiskies.find((w) => w.id === whiskyId) ?? null,
@@ -59,18 +63,27 @@ export function JournalForm({
 
   function submit() {
     if (!whiskyId || !canSubmit) return;
+    setPhase("loading");
     startTransition(async () => {
       const result = await submitTastingNote({ whiskyId, rating, review });
-      if (result?.error) toast.error(result.error);
+      if ("error" in result) {
+        toast.error(result.error);
+        setPhase("idle");
+        return;
+      }
+      setPhase("done");
     });
   }
 
-  if (pending) {
+  if (pending || phase !== "idle") {
     return (
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-center">
-        <WhiskyGlass3D size={150} />
-        <p className="text-lg font-semibold">후기를 읽고 취향을 다시 계산하는 중…</p>
-        <p className="text-sm text-muted-foreground">다음 3병까지 함께 골라요. 보통 10초 안에 끝나요.</p>
+        <BottlingLoader
+          done={phase === "done"}
+          lines={["후기를 읽는 중…", "취향 프로필을 다시 계산하는 중…", "다음 3병을 고르는 중…"]}
+          onComplete={goResult}
+        />
+        <p className="text-sm text-muted-foreground">보통 10초 안에 끝나요.</p>
       </div>
     );
   }

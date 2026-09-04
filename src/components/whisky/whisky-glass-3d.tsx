@@ -64,6 +64,25 @@ export function WhiskyGlass3D({
       const root = new THREE.Group();
       scene.add(root);
 
+      // 잔 뒤의 따뜻한 빛 번짐. 불투명 평면이라 굴절 버퍼에 담겨서 유리가 "비쳐 보여요".
+      const glowCanvas = document.createElement("canvas");
+      glowCanvas.width = glowCanvas.height = 256;
+      const g2d = glowCanvas.getContext("2d")!;
+      const grad = g2d.createRadialGradient(128, 118, 8, 128, 118, 128);
+      grad.addColorStop(0, "#6b4522");
+      grad.addColorStop(0.35, "#3a2614");
+      grad.addColorStop(1, "#1a120c");
+      g2d.fillStyle = grad;
+      g2d.fillRect(0, 0, 256, 256);
+      const glowTex = new THREE.CanvasTexture(glowCanvas);
+      glowTex.colorSpace = THREE.SRGBColorSpace;
+      const backdrop = new THREE.Mesh(
+        new THREE.PlaneGeometry(16, 16),
+        new THREE.MeshBasicMaterial({ map: glowTex }),
+      );
+      backdrop.position.set(0, 1.2, -5);
+      scene.add(backdrop);
+
       // ── 유리 (닫힌 회전체: 바닥 중심 → 바깥 벽 → 림 → 안쪽 벽 → 안쪽 바닥) ──
       const glassProfile = [
         [0, 0], [0.86, 0], [0.92, 0.06], [0.98, 2.15], [1.0, 2.3], [0.92, 2.3],
@@ -89,22 +108,28 @@ export function WhiskyGlass3D({
       root.add(glass);
 
       // ── 액체 (안쪽 벽을 따라, 수면은 살짝 오목) ──
-      const level = 1.45;
+      const level = 1.6;
       const liquidProfile = [
         [0, 0.41], [0.55, 0.42], [0.815, 0.47], [0.86, level - 0.02], [0.6, level], [0, level - 0.03],
       ].map(([x, y]) => new THREE.Vector2(x, y));
       const liquidGeo = new THREE.LatheGeometry(liquidProfile, 128);
-      // 액체·얼음은 transmission·transparent 를 쓰지 않아요: three 의 굴절 버퍼에는
-      // 불투명 물체만 담겨서, 아니면 유리 안에서 사라져요. 대신 자체 발광으로 호박색이 빛나게.
+      // 액체: 투과 재질. three 는 DoubleSide 투과 물체만 굴절 버퍼에 그려주므로 DoubleSide 필수
+      // (아니면 유리 뒤에서 액체가 사라져요). 어두운 바에서 빛이 통과하는 호박색.
       const liquidMat = new THREE.MeshPhysicalMaterial({
-        color: 0xc9721a,
-        roughness: 0.22,
+        color: 0xf2a53a,
+        roughness: 0.06,
         metalness: 0,
-        clearcoat: 0.8,
-        clearcoatRoughness: 0.1,
-        envMapIntensity: 0.35,
-        emissive: new THREE.Color(0x7a3406),
-        emissiveIntensity: 0.55,
+        transmission: 0.78,
+        thickness: 1.1,
+        ior: 1.36,
+        attenuationColor: new THREE.Color(0xc0641a),
+        attenuationDistance: 0.55,
+        clearcoat: 0.5,
+        clearcoatRoughness: 0.08,
+        envMapIntensity: 0.5,
+        emissive: new THREE.Color(0x8a4210),
+        emissiveIntensity: 0.28,
+        side: THREE.DoubleSide,
       });
       const liquidGroup = new THREE.Group();
       liquidGroup.position.y = 0.9; // 회전 기준을 액체 가운데로
@@ -115,19 +140,21 @@ export function WhiskyGlass3D({
 
       // ── 얼음 ──
       const iceMat = new THREE.MeshPhysicalMaterial({
-        color: 0xdfeeff,
-        roughness: 0.28,
+        color: 0xf4f9ff,
+        roughness: 0.18,
+        transmission: 0.9,
+        thickness: 0.4,
+        ior: 1.31,
         clearcoat: 1,
         clearcoatRoughness: 0.15,
-        envMapIntensity: 0.5,
-        emissive: new THREE.Color(0x3a4a5a),
-        emissiveIntensity: 0.25,
+        envMapIntensity: 0.9,
+        side: THREE.DoubleSide,
       });
-      const ice1 = new THREE.Mesh(new RoundedBoxGeometry(0.72, 0.72, 0.72, 4, 0.12), iceMat);
-      ice1.position.set(0.22, 1.28, 0.1);
+      const ice1 = new THREE.Mesh(new RoundedBoxGeometry(0.56, 0.56, 0.56, 4, 0.1), iceMat);
+      ice1.position.set(0.24, 1.42, 0.12);
       ice1.rotation.set(0.3, 0.6, 0.15);
-      const ice2 = new THREE.Mesh(new RoundedBoxGeometry(0.62, 0.62, 0.62, 4, 0.1), iceMat);
-      ice2.position.set(-0.3, 1.05, -0.15);
+      const ice2 = new THREE.Mesh(new RoundedBoxGeometry(0.48, 0.48, 0.48, 4, 0.09), iceMat);
+      ice2.position.set(-0.3, 1.25, -0.12);
       ice2.rotation.set(0.5, -0.4, 0.4);
       root.add(ice1, ice2);
 
@@ -161,7 +188,7 @@ export function WhiskyGlass3D({
       rim.position.set(-3, 5, -4);
       scene.add(rim);
       // 액체가 안에서 빛나 보이게 뒤에서 비추는 따뜻한 빛
-      const back = new THREE.PointLight(0xffb347, 14, 12, 1.5);
+      const back = new THREE.PointLight(0xffb347, 22, 12, 1.5);
       back.position.set(0.4, 1.0, -2.2);
       scene.add(back);
 
@@ -178,12 +205,13 @@ export function WhiskyGlass3D({
         const a = lightAngle;
         key.position.set(Math.cos(a) * 3.4, 4.6, Math.sin(a) * 3.4 + 0.5);
         fill.position.set(-Math.cos(a) * 3, 1.8, -Math.sin(a) * 3);
+        backdrop.position.x = Math.cos(a) * 1.8;
         if (!reduced) {
           liquidGroup.rotation.z = Math.sin(t * 1.25) * 0.065;
           liquidGroup.rotation.x = Math.cos(t * 0.95) * 0.04;
-          ice1.position.y = 1.28 + Math.sin(t * 1.1) * 0.03;
+          ice1.position.y = 1.42 + Math.sin(t * 1.1) * 0.03;
           ice1.rotation.y += 0.0025;
-          ice2.position.y = 1.05 + Math.cos(t * 0.9 + 1) * 0.025;
+          ice2.position.y = 1.25 + Math.cos(t * 0.9 + 1) * 0.025;
           ice2.rotation.z -= 0.002;
           root.rotation.y = Math.sin(t * 0.25) * 0.18;
         }
@@ -203,6 +231,8 @@ export function WhiskyGlass3D({
         liquidMat.dispose();
         iceMat.dispose();
         envTex.dispose();
+        glowTex.dispose();
+        backdrop.geometry.dispose();
         pmrem.dispose();
         renderer.dispose();
         renderer.domElement.remove();

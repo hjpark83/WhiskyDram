@@ -20,7 +20,7 @@ const answersSchema = z.object(
   ),
 );
 
-export type SubmitQuizResult = { error: string } | undefined;
+export type SubmitQuizResult = { error: string } | { ok: true };
 
 export async function submitQuiz(raw: QuizAnswers): Promise<SubmitQuizResult> {
   const parsed = answersSchema.safeParse(raw);
@@ -65,5 +65,5 @@ export async function submitQuiz(raw: QuizAnswers): Promise<SubmitQuizResult> {
     return { error: "추천 결과를 저장하지 못했어요. 잠시 후 다시 시도해주세요." };
   }
 
-  redirect("/recommend");
+  return { ok: true };
 }

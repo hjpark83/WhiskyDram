@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useCallback, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { WhiskyGlass3D } from "@/components/whisky/whisky-glass-3d";
+import { BottlingLoader } from "@/components/whisky/bottling-loader";
 import { cn } from "@/lib/utils";
 import { QUIZ_QUESTIONS, type QuizAnswers } from "@/data/quiz";
 import { WHISKIES } from "@/data/whiskies";
@@ -21,7 +22,9 @@ export function QuizForm({ initialAnswers }: { initialAnswers?: QuizAnswers }) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<QuizAnswers>(initialAnswers ?? {});
   const [pending, startTransition] = useTransition();
-  const [loadingIdx, setLoadingIdx] = useState(0);
+  const [phase, setPhase] = useState<"idle" | "loading" | "done">("idle");
+  const router = useRouter();
+  const goResult = useCallback(() => router.push("/recommend"), [router]);
 
   const total = QUIZ_QUESTIONS.length;
   const q = QUIZ_QUESTIONS[step];
@@ -42,26 +45,22 @@ export function QuizForm({ initialAnswers }: { initialAnswers?: QuizAnswers }) {
       toast.error("아직 답하지 않은 질문이 있어요.");
       return;
     }
-    setLoadingIdx(0);
-    const timer = window.setInterval(
-      () => setLoadingIdx((i) => Math.min(LOADING_LINES.length - 1, i + 1)),
-      2500,
-    );
+    setPhase("loading");
     startTransition(async () => {
-      try {
-        const result = await submitQuiz(answers);
-        if (result?.error) toast.error(result.error);
-      } finally {
-        window.clearInterval(timer);
+      const result = await submitQuiz(answers);
+      if ("error" in result) {
+        toast.error(result.error);
+        setPhase("idle");
+        return;
       }
+      setPhase("done");
     });
   }
 
-  if (pending) {
+  if (pending || phase !== "idle") {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-center">
-        <WhiskyGlass3D size={150} />
-        <p className="text-lg font-semibold">{LOADING_LINES[loadingIdx]}</p>
+        <BottlingLoader done={phase === "done"} lines={LOADING_LINES} onComplete={goResult} />
         <p className="text-sm text-muted-foreground">보통 10초 안에 끝나요.</p>
       </div>
     );

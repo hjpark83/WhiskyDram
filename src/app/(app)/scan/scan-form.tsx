@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { AlertTriangle, Camera, GlassWater, ImagePlus, NotebookPen, RotateCcw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { WhiskyGlass3D } from "@/components/whisky/whisky-glass-3d";
+import { BottlingLoader } from "@/components/whisky/bottling-loader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,6 +36,8 @@ export function ScanForm({ personalized }: { personalized: boolean }) {
   const [base64, setBase64] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<ScanResult | null>(null);
   const [pending, startTransition] = useTransition();
+  const [phase, setPhase] = useState<"idle" | "loading" | "done">("idle");
+  const [revealed, setRevealed] = useState<ScanResult | null>(null);
 
   async function onFile(file: File | undefined) {
     if (!file) return;
@@ -55,17 +57,28 @@ export function ScanForm({ personalized }: { personalized: boolean }) {
 
   function scan() {
     if (!base64) return;
+    setPhase("loading");
+    setRevealed(null);
     startTransition(async () => {
       const r = await submitScan({ imageBase64: base64, mediaType: "image/jpeg" });
       setOutcome(r);
-      if (!r.ok) toast.error(r.error);
+      if (!r.ok) {
+        toast.error(r.error);
+        setPhase("idle");
+        setRevealed(r);
+        return;
+      }
+      setPhase("done");
     });
   }
+  const busy = pending || (phase !== "idle" && revealed === null);
 
   function reset() {
     setPreview(null);
     setBase64(null);
     setOutcome(null);
+    setRevealed(null);
+    setPhase("idle");
     if (inputRef.current) inputRef.current.value = "";
   }
 
@@ -100,71 +113,77 @@ export function ScanForm({ personalized }: { personalized: boolean }) {
         </button>
         <div className="flex gap-2">
           {preview && (
-            <Button variant="outline" onClick={reset} disabled={pending}>
+            <Button variant="outline" onClick={reset} disabled={busy}>
               <RotateCcw data-icon="inline-start" />
               다시 찍기
             </Button>
           )}
-          <Button onClick={preview ? scan : () => inputRef.current?.click()} disabled={pending} className="flex-1">
+          <Button onClick={preview ? scan : () => inputRef.current?.click()} disabled={busy} className="flex-1">
             {preview ? <Sparkles data-icon="inline-start" /> : <ImagePlus data-icon="inline-start" />}
-            {pending ? "라벨을 읽는 중…" : preview ? "이 병 알아보기" : "사진 고르기"}
+            {busy ? "라벨을 읽는 중…" : preview ? "이 병 알아보기" : "사진 고르기"}
           </Button>
         </div>
       </div>
 
       <div>
-        {pending && (
+        {busy && (
           <div className="flex h-full min-h-[240px] flex-col items-center justify-center gap-3 text-center">
-            <WhiskyGlass3D size={140} />
-            <p className="font-semibold">라벨을 읽고 사전에서 찾는 중…</p>
+            <BottlingLoader
+              done={phase === "done"}
+              lines={["라벨을 읽는 중…", `${312}병 사전에서 찾는 중…`, "취향과 맞춰보는 중…"]}
+              onComplete={() => {
+                setRevealed(outcome);
+                setPhase("idle");
+              }}
+            />
             <p className="text-sm text-muted-foreground">보통 5~10초 걸려요.</p>
           </div>
         )}
 
-        {!pending && outcome?.ok && outcome.whisky && (
+        {!busy && revealed?.ok && revealed.whisky && (
           <Card className="border-amber-400/40">
             <CardContent className="space-y-4 p-5">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-xs text-muted-foreground">
-                    라벨 인식 · {CONFIDENCE_LABEL[outcome.result.confidence]}
+                    라벨 인식 · {CONFIDENCE_LABEL[revealed.result.confidence]}
                   </p>
                   <h2 className="text-xl font-bold">
-                    <Link href={`/whisky/${outcome.whisky.id}`} className="hover:underline">
-                      {outcome.whisky.nameKo}
+                    <Link href={`/whisky/${revealed.whisky.id}`} className="hover:underline">
+                      {revealed.whisky.nameKo}
                     </Link>
                   </h2>
                   <p className="text-sm text-muted-foreground">
-                    {outcome.whisky.name} · {outcome.whisky.typeLabel} · {outcome.whisky.abv}%
+                    {revealed.whisky.name} · {revealed.whisky.typeLabel} · {revealed.whisky.abv}%
                   </p>
                 </div>
-                <MatchBadge percent={outcome.result.percent} />
+                <MatchBadge percent={revealed.result.percent} />
               </div>
 
               <div className="flex flex-wrap gap-1.5">
-                <Badge variant="outline">{outcome.whisky.price}</Badge>
-                {outcome.whisky.styles.map((t) => (
+                <Badge variant="outline">{revealed.whisky.price}</Badge>
+                {revealed.whisky.styles.map((t) => (
                   <Badge key={t} className="bg-amber-500/15 text-amber-200">
                     {STYLE_EMOJI[t]} {STYLE_LABELS_KO[t]}
                   </Badge>
                 ))}
               </div>
 
-              {outcome.result.verdict && (
+              {revealed.result.verdict && (
                 <div className="space-y-2 rounded-xl bg-amber-500/10 p-4">
                   <p className="font-semibold text-amber-200">
                     {personalized ? "내 취향 판정: " : ""}
-                    {outcome.result.verdict.headline}
+                    {revealed.result.verdict.headline}
                   </p>
-                  <p className="text-sm leading-relaxed">{outcome.result.verdict.reason}</p>
+                  <p className="text-sm leading-relaxed">{revealed.result.verdict.reason}</p>
                   <p className="flex gap-2 text-sm">
                     <GlassWater className="mt-0.5 size-4 shrink-0 text-amber-400" aria-hidden />
-                    {outcome.result.verdict.howToDrink}
+                    {revealed.result.verdict.howToDrink}
                   </p>
-                  {outcome.result.verdict.caution && (
+                  {revealed.result.verdict.caution && (
                     <p className="flex gap-2 text-sm text-muted-foreground">
                       <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
-                      {outcome.result.verdict.caution}
+                      {revealed.result.verdict.caution}
                     </p>
                   )}
                 </div>
@@ -179,11 +198,11 @@ export function ScanForm({ personalized }: { personalized: boolean }) {
                 </p>
               )}
 
-              {outcome.alternatives.length > 0 && (
+              {revealed.alternatives.length > 0 && (
                 <div className="text-sm">
                   <p className="mb-1 text-muted-foreground">혹시 이 병인가요?</p>
                   <ul className="flex flex-wrap gap-1.5">
-                    {outcome.alternatives.map((a) => (
+                    {revealed.alternatives.map((a) => (
                       <li key={a.id}>
                         <Link
                           href={`/whisky/${a.id}`}
@@ -198,13 +217,13 @@ export function ScanForm({ personalized }: { personalized: boolean }) {
               )}
 
               <div className="flex flex-wrap gap-2 pt-1">
-                <Button size="sm" render={<Link href={`/whisky/${outcome.whisky.id}`} />}>
+                <Button size="sm" render={<Link href={`/whisky/${revealed.whisky.id}`} />}>
                   자세히 보기
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
-                  render={<Link href={`/journal?whisky=${outcome.whisky.id}`} />}
+                  render={<Link href={`/journal?whisky=${revealed.whisky.id}`} />}
                 >
                   <NotebookPen data-icon="inline-start" />
                   마셨다면 후기 남기기
@@ -214,17 +233,17 @@ export function ScanForm({ personalized }: { personalized: boolean }) {
           </Card>
         )}
 
-        {!pending && outcome?.ok && !outcome.whisky && (
+        {!busy && revealed?.ok && !revealed.whisky && (
           <Card>
             <CardContent className="space-y-3 p-5">
               <p className="font-semibold">사전에 없는 병이에요</p>
-              {outcome.result.guessName && (
+              {revealed.result.guessName && (
                 <p className="text-sm">
-                  라벨은 <b>{outcome.result.guessName}</b>(으)로 읽혔어요.
+                  라벨은 <b>{revealed.result.guessName}</b>(으)로 읽혔어요.
                 </p>
               )}
-              {outcome.result.readText && (
-                <p className="text-xs text-muted-foreground">읽은 글자: {outcome.result.readText}</p>
+              {revealed.result.readText && (
+                <p className="text-xs text-muted-foreground">읽은 글자: {revealed.result.readText}</p>
               )}
               <p className="text-sm text-muted-foreground">
                 사전에는 {"국내에서 구할 수 있는 병 위주로"} 312병이 있어요. 비슷한 병을 검색해보거나,
@@ -242,11 +261,11 @@ export function ScanForm({ personalized }: { personalized: boolean }) {
           </Card>
         )}
 
-        {!pending && outcome && !outcome.ok && (
+        {!busy && revealed && !revealed.ok && (
           <Card>
             <CardContent className="space-y-3 p-5">
               <p className="font-semibold">인식에 실패했어요</p>
-              <p className="text-sm text-muted-foreground">{outcome.error}</p>
+              <p className="text-sm text-muted-foreground">{revealed.error}</p>
               <Button size="sm" variant="outline" render={<Link href="/whisky" />}>
                 사전에서 검색
               </Button>
@@ -254,7 +273,7 @@ export function ScanForm({ personalized }: { personalized: boolean }) {
           </Card>
         )}
 
-        {!pending && !outcome && (
+        {!busy && !revealed && (
           <div className="flex h-full min-h-[240px] flex-col justify-center gap-3 rounded-2xl border border-dashed p-6 text-sm text-muted-foreground">
             <p className="font-medium text-foreground">이렇게 써보세요</p>
             <ul className="space-y-1">

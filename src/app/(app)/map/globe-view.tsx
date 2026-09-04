@@ -93,6 +93,7 @@ const COUNTRY_EMOJI: Record<string, string> = {
 const VIEWS: { id: string; label: string; lat: number; lng: number; altitude: number }[] = [
   { id: "world", label: "전체", lat: 30, lng: 20, altitude: 2.4 },
   { id: "scotland", label: "스코틀랜드", lat: 57, lng: -4.2, altitude: 0.5 },
+  { id: "speyside", label: "스페이사이드", lat: 57.47, lng: -3.22, altitude: 0.11 },
   { id: "islay", label: "아일라 섬", lat: 55.75, lng: -6.2, altitude: 0.2 },
   { id: "ireland", label: "아일랜드", lat: 53.3, lng: -7.5, altitude: 0.55 },
   { id: "kentucky", label: "켄터키", lat: 37.9, lng: -85.2, altitude: 0.55 },
@@ -384,7 +385,10 @@ export function GlobeView({
   return (
     <div
       ref={containerRef}
-      className="fixed inset-x-0 bottom-[3.5rem] top-14 z-0 bg-[#120c08] sm:bottom-0"
+      className={cn(
+        "fixed inset-x-0 bottom-[3.5rem] top-14 z-0 bg-[#120c08] sm:bottom-0",
+        altitude < 0.3 && "is-close",
+      )}
       onPointerDown={() => {
         const g = globeRef.current;
         if (g) g.controls().autoRotate = false;
@@ -438,7 +442,7 @@ export function GlobeView({
               onClick={() => {
                 setActiveView(v.id);
                 setSelected(null);
-                flyTo(v.lat, v.lng, v.altitude);
+                flyTo(v.lat, v.lng, v.altitude, v.altitude < 0.2 ? 1400 : 900);
               }}
               className={cn(
                 "rounded-full border px-2.5 py-1 text-[11px] transition-colors sm:text-xs",
@@ -467,7 +471,9 @@ export function GlobeView({
             <Legend key={o} color={ORIGIN_COLORS[o]} label={ORIGIN_LABELS_KO[o]} />
           ))
         )}
-        <span className="rounded-full bg-black/40 px-2 py-0.5">{zoomed ? "증류소 보기" : "나라·지역 보기 · 스크롤로 확대"}</span>
+        <span className="rounded-full bg-black/40 px-2 py-0.5">
+          {zoomed ? "증류소 보기 · 겹치면 스크롤로 더 확대" : "나라·지역 보기 · 스크롤로 확대"}
+        </span>
       </div>
 
       {/* 우측: 정보 패널 (데스크톱) */}
