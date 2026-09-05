@@ -1,4 +1,5 @@
 import { SEED_POPUPS, type PopupLink, type PopupReservation, type PopupStore } from "@/data/popups";
+import { rethrowIfFrameworkError } from "@/lib/next-error";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -94,14 +95,6 @@ function toRecord(row: PopupRow): PopupRecord {
       : [],
     aiNote: row.ai_note,
   };
-}
-
-/**
- * Next.js 는 리다이렉트·동적 렌더 전환 같은 흐름 제어를 예외로 던져요 (digest 가 붙어요).
- * 그걸 삼키면 페이지가 잘못 정적 렌더링될 수 있어서 다시 던져야 해요.
- */
-function rethrowIfFrameworkError(error: unknown): void {
-  if (typeof (error as { digest?: unknown } | null)?.digest === "string") throw error;
 }
 
 function seedRecords(): PopupRecord[] {
