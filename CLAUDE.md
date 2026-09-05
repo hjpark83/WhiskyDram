@@ -16,6 +16,8 @@ Hackathon entry (Wanted AI Challenge 2026, deadline 2026-09-20, solo). Ship over
 - AI 호출은 **직접 SDK 를 쓰지 말고** `src/lib/ai/provider.ts` 의 `generateJson()` / `streamTurn()` 을 쓰세요. `AI_PROVIDER` 로 Claude·OpenAI·Gemini 를 바꿔 끼우기 때문이에요. 새 AI 기능도 이 두 함수 위에 올려요. 모든 기능에는 키가 없을 때 쓸 규칙 기반 폴백이 있어야 해요 (데모가 멈추면 안 돼요).
 - Anthropic 쪽 코드를 직접 손볼 때만 `claude-api` 스킬을 먼저 읽어요. 구조화 출력은 자유 텍스트 파싱이 아니라 스키마로 받아요.
 - 팝업 스토어는 사람이 바꾸는 정보라 **Supabase `popup_stores` 가 원본**이고, `src/data/popups.ts` 는 DB가 비었을 때 쓰는 예시 시드(`sample: true`)예요. 실제로 없는 행사를 사실처럼 쓰지 말고, 시드는 예시임을 UI에 표시해요. 캐치테이블·네이버는 공개 API가 없어서 크롤링하지 않고 링크만 이어줘요.
+- AI 가 웹에서 찾아온 정보(팝업 등)는 **사람이 확인하기 전에는 공개하지 않아요**. `published: false` 로 저장하고 출처 URL 과 확인할 점을 함께 남겨요. 날짜·주소를 모르면 그럴듯하게 채우지 말고 비워두고 관리자가 채우게 해요. 웹 검색은 `src/lib/ai/web-research.ts` 의 `researchWeb()` (프로바이더 검색 그라운딩)만 쓰고, 남의 사이트 HTML 을 긁지 않아요.
+- 사용자 표시 이름은 `profiles.display_name` 이에요. 가입 폼의 닉네임이 `raw_user_meta_data.display_name` 으로 넘어가고 트리거가 옮겨요. 이메일을 화면에 노출하지 말고 이 이름을 쓰세요.
 - 관리자 권한은 `public.admins` 테이블 + `admin_emails` 자동 승격이에요. 권한 확인은 `src/lib/auth/admin.ts` (`requireAdmin()`), 쓰기 권한은 RLS 의 `public.is_admin()` 으로 막아요.
 - 지구본은 나라 → 지역 → 증류소 3단계이고, 마지막 단계에서는 고도에 맞춘 격자 클러스터로 핀이 겹치지 않게 해요 (`src/app/(app)/map/cluster.ts`). 육지 텍스처는 수륙 마스크에서 런타임에 만들어요 (`land-texture.ts`).
 

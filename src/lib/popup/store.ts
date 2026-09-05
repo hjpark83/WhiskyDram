@@ -11,6 +11,12 @@ import { createClient } from "@/lib/supabase/server";
 export interface PopupRecord extends PopupStore {
   published: boolean;
   source: "db" | "seed";
+  /** AI 가 웹 검색으로 만든 초안인지 (관리자 확인 전) */
+  aiGenerated: boolean;
+  /** 근거가 된 주소 */
+  sources: string[];
+  /** 관리자가 확인해야 할 것 */
+  aiNote: string | null;
 }
 
 interface PopupRow {
@@ -34,6 +40,9 @@ interface PopupRow {
   tags: string[] | null;
   accent: string | null;
   published: boolean | null;
+  ai_generated: boolean | null;
+  sources: unknown;
+  ai_note: string | null;
 }
 
 const RESERVATIONS: PopupReservation[] = ["catchtable", "naver", "instagram", "walkin"];
@@ -79,6 +88,11 @@ function toRecord(row: PopupRow): PopupRecord {
     sample: false,
     published: row.published ?? true,
     source: "db",
+    aiGenerated: row.ai_generated ?? false,
+    sources: Array.isArray(row.sources)
+      ? row.sources.filter((u): u is string => typeof u === "string" && /^https?:\/\//i.test(u))
+      : [],
+    aiNote: row.ai_note,
   };
 }
 
@@ -91,11 +105,18 @@ function rethrowIfFrameworkError(error: unknown): void {
 }
 
 function seedRecords(): PopupRecord[] {
-  return SEED_POPUPS.map((p) => ({ ...p, published: true, source: "seed" as const }));
+  return SEED_POPUPS.map((p) => ({
+    ...p,
+    published: true,
+    source: "seed" as const,
+    aiGenerated: false,
+    sources: [],
+    aiNote: null,
+  }));
 }
 
 const COLUMNS =
-  "id, brand, brand_en, title, summary, description, highlights, venue, address, city, start_date, end_date, hours, entry, reservation, links, whisky_ids, tags, accent, published";
+  "id, brand, brand_en, title, summary, description, highlights, venue, address, city, start_date, end_date, hours, entry, reservation, links, whisky_ids, tags, accent, published, ai_generated, sources, ai_note";
 
 export async function listPopups(opts: { includeUnpublished?: boolean } = {}): Promise<PopupRecord[]> {
   try {

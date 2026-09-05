@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Database, Plus, Store } from "lucide-react";
+import { Database, Plus, Sparkles, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { WHISKIES } from "@/data/whiskies";
@@ -40,6 +40,9 @@ export default async function AdminDashboardPage() {
             </Button>
             <Button size="sm" variant="outline" render={<Link href="/admin/popups" />}>
               목록 보기
+            </Button>
+            <Button size="sm" variant="outline" render={<Link href="/admin/popups/discover" />}>
+              <Sparkles className="size-4" aria-hidden /> AI로 찾기
             </Button>
           </div>
         </CardContent>

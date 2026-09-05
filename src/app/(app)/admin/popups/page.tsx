@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Eye, EyeOff, Pencil, Plus, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,9 +19,14 @@ export default async function AdminPopupsPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-xl text-amber-100">팝업 {fromSeed ? "예시" : popups.length + "개"}</h2>
-        <Button size="sm" render={<Link href="/admin/popups/new" />}>
-          <Plus className="size-4" aria-hidden /> 새 팝업
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" render={<Link href="/admin/popups/discover" />}>
+            <Sparkles className="size-4" aria-hidden /> AI로 찾기
+          </Button>
+          <Button size="sm" render={<Link href="/admin/popups/new" />}>
+            <Plus className="size-4" aria-hidden /> 새 팝업
+          </Button>
+        </div>
       </div>
 
       {fromSeed && (
@@ -41,6 +46,11 @@ export default async function AdminPopupsPage() {
                     <Badge variant="secondary">{p.brand}</Badge>
                     <PopupStatusBadge popup={p} />
                     {!p.published && <Badge variant="outline">비공개</Badge>}
+                    {p.aiGenerated && (
+                      <Badge variant="outline" className="border-amber-400/60 text-amber-300">
+                        AI 초안
+                      </Badge>
+                    )}
                     {p.source === "seed" && (
                       <Badge variant="outline" className="border-dashed">
                         예시
@@ -51,6 +61,25 @@ export default async function AdminPopupsPage() {
                   <p className="truncate text-xs text-muted-foreground">
                     {formatPeriod(p)} · {p.city} {p.venue} · 위스키 {p.whiskyIds.length}병
                   </p>
+                  {p.aiGenerated && p.aiNote && (
+                    <p className="mt-1 text-xs text-amber-300">확인할 점: {p.aiNote}</p>
+                  )}
+                  {p.sources.length > 0 && (
+                    <ul className="mt-1 flex flex-wrap gap-2">
+                      {p.sources.map((url) => (
+                        <li key={url}>
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-muted-foreground underline-offset-2 hover:text-amber-300 hover:underline"
+                          >
+                            {new URL(url).hostname.replace(/^www\./, "")}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-1.5">
                   <Button size="sm" variant="outline" render={<Link href={`/popup/${p.id}`} />}>

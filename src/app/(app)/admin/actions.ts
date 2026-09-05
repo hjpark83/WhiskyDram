@@ -3,6 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { SEED_POPUPS } from "@/data/popups";
+import {
+  researchErrorMessage,
+  researchPopups,
+  whiskyIdsForBrand,
+  type PopupDraft,
+  type ResearchReport,
+} from "@/lib/ai/popup-research";
 import { getAdminUser } from "@/lib/auth/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -223,4 +230,110 @@ export async function importSeedPopups(): Promise<void> {
   revalidatePath("/popup");
   revalidatePath("/admin/popups");
   revalidatePath("/home");
+}
+
+
+// ---------------------------------------------------------------------------
+// AI 로 팝업 찾기 (검색 그라운딩 → 초안 → 관리자가 확인하고 공개)
+// ---------------------------------------------------------------------------
+
+export type DiscoverState = { error?: string; report?: ResearchReport } | null;
+
+export async function discoverPopups(_prev: DiscoverState, formData: FormData): Promise<DiscoverState> {
+  const admin = await getAdminUser();
+  if (!admin) return { error: "관리자만 쓸 수 있어요." };
+
+  const brands = ((formData.get("brands") as string | null) ?? "")
+    .split(/[,\n]/)
+    .map((b) => b.trim())
+    .filter(Boolean)
+    .slice(0, 12);
+  const region = ((formData.get("region") as string | null) ?? "").trim();
+
+  try {
+    const report = await researchPopups({ brands, region });
+    return { report };
+  } catch (error) {
+    console.error("[admin/discover] 실패", error);
+    return { error: researchErrorMessage(error) };
+  }
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+function draftId(draft: PopupDraft): string {
+  const base = slugify(`${draft.brand}-${draft.title}`).slice(0, 60);
+  // 같은 행사를 두 번 저장해도 한 줄로 합쳐지게 기간을 붙여요
+  return `${base || "popup"}-${draft.startDate || "tbd"}`;
+}
+
+export type SaveDraftsState = { error?: string; message?: string } | null;
+
+/** 고른 후보만 **비공개** 초안으로 저장해요. 공개는 관리자가 따로 눌러야 해요. */
+export async function saveDrafts(_prev: SaveDraftsState, formData: FormData): Promise<SaveDraftsState> {
+  const admin = await getAdminUser();
+  if (!admin) return { error: "관리자만 저장할 수 있어요." };
+
+  let drafts: PopupDraft[];
+  try {
+    drafts = JSON.parse((formData.get("drafts") as string | null) ?? "[]") as PopupDraft[];
+  } catch {
+    return { error: "후보 데이터를 읽지 못했어요. 다시 검색해주세요." };
+  }
+
+  const rows = [];
+  for (let i = 0; i < drafts.length; i++) {
+    if (formData.get(`pick-${i}`) !== "on") continue;
+    const draft = drafts[i];
+    const startDate = ((formData.get(`start-${i}`) as string | null) ?? draft.startDate).trim();
+    const endDate = ((formData.get(`end-${i}`) as string | null) ?? draft.endDate).trim();
+
+    if (!ISO_DATE.test(startDate) || !ISO_DATE.test(endDate)) {
+      return { error: `"${draft.title}" 의 기간을 채워주세요. AI 가 기간을 확인하지 못했어요.` };
+    }
+    if (endDate < startDate) {
+      return { error: `"${draft.title}" 의 종료일이 시작일보다 앞서요.` };
+    }
+
+    rows.push({
+      id: draftId({ ...draft, startDate }),
+      brand: draft.brand,
+      brand_en: draft.brandEn,
+      title: draft.title,
+      summary: draft.summary,
+      description: draft.description,
+      highlights: draft.highlights,
+      venue: draft.venue,
+      address: draft.address,
+      city: draft.city,
+      start_date: startDate,
+      end_date: endDate,
+      hours: draft.hours,
+      entry: draft.entry,
+      reservation: draft.reservation,
+      links: draft.sources.map((url) => ({ kind: "official", label: "출처", url })),
+      whisky_ids: draft.whiskyIds.length > 0 ? draft.whiskyIds : whiskyIdsForBrand(draft.brand),
+      tags: [],
+      accent: "#d9a441",
+      // 사람이 확인하기 전에는 사용자에게 보이지 않아요
+      published: false,
+      ai_generated: true,
+      sources: draft.sources,
+      ai_note: [draft.verifyNote, `AI 확신도: ${draft.confidence}`].filter(Boolean).join(" · "),
+      created_by: admin.id,
+    });
+  }
+
+  if (rows.length === 0) return { error: "저장할 항목을 골라주세요." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("popup_stores").upsert(rows, { onConflict: "id" });
+  if (error) {
+    return { error: `저장에 실패했어요: ${error.message}` };
+  }
+
+  revalidatePath("/admin/popups");
+  return {
+    message: `${rows.length}개를 비공개 초안으로 저장했어요. 목록에서 내용을 확인하고 공개해주세요.`,
+  };
 }
