@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { AuthError } from "@supabase/supabase-js";
 import { z } from "zod";
 import { nicknameSchema } from "@/lib/auth/nickname";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, hasSupabaseConfig, SUPABASE_CONFIG_MESSAGE } from "@/lib/supabase/server";
 
 export type AuthState = {
   error?: string;
@@ -48,6 +48,8 @@ export async function signIn(
   _prev: AuthState,
   formData: FormData,
 ): Promise<AuthState> {
+  if (!hasSupabaseConfig()) return { error: SUPABASE_CONFIG_MESSAGE, code: "config_missing" };
+
   const parsed = credentialsSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
@@ -84,6 +86,9 @@ export async function signUp(
   if (!nickname.success) {
     return { error: nickname.error.issues[0]?.message };
   }
+  if (!hasSupabaseConfig()) {
+    return { error: SUPABASE_CONFIG_MESSAGE, code: "config_missing" };
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
@@ -107,6 +112,7 @@ export async function signUp(
 }
 
 export async function signInWithGoogle(formData: FormData) {
+  if (!hasSupabaseConfig()) redirect("/login?error=config");
   const supabase = await createClient();
   const next = (formData.get("next") as string | null) || "/home";
   const { data, error } = await supabase.auth.signInWithOAuth({
