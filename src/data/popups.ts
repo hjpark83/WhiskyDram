@@ -48,6 +48,12 @@ export interface PopupStore {
   tags: string[];
   /** 카드 강조색 */
   accent: string;
+  /**
+   * 대표 사진 주소. 비어 있으면 브랜드 색 그라데이션으로 대신해요.
+   * 남의 사진을 링크로 끌어다 쓰면 저작권·핫링크 문제가 있으니,
+   * 브랜드가 공개한 보도자료 이미지나 직접 찍은 사진을 넣어요.
+   */
+  imageUrl: string;
   /** 예시 데이터인지 (실제 진행 정보는 관리자가 등록) */
   sample: boolean;
 }
@@ -97,6 +103,7 @@ export const SEED_POPUPS: PopupStore[] = [
     whiskyIds: ["johnnie-walker-blue", "johnnie-walker-black", "johnnie-walker-green-15"],
     tags: ["시음", "하이볼", "블렌디드"],
     accent: "#3d6ea8",
+    imageUrl: "",
     sample: true,
   },
   {
@@ -124,6 +131,7 @@ export const SEED_POPUPS: PopupStore[] = [
     whiskyIds: ["balvenie-12-doublewood", "balvenie-14-caribbean-cask", "balvenie-17-doublewood"],
     tags: ["워크숍", "셰리", "시음"],
     accent: "#a8752f",
+    imageUrl: "",
     sample: true,
   },
   {
@@ -151,6 +159,7 @@ export const SEED_POPUPS: PopupStore[] = [
     whiskyIds: ["glenfiddich-12", "glenfiddich-15", "glenfiddich-18", "glenfiddich-21"],
     tags: ["전시", "무료", "숙성비교"],
     accent: "#2f7a52",
+    imageUrl: "",
     sample: true,
   },
   {
@@ -178,6 +187,7 @@ export const SEED_POPUPS: PopupStore[] = [
     whiskyIds: ["macallan-12-sherry-oak", "macallan-12-double-cask", "macallan-15-double-cask"],
     tags: ["셰리", "시음", "향"],
     accent: "#8a2f3a",
+    imageUrl: "",
     sample: true,
   },
   {
@@ -201,6 +211,7 @@ export const SEED_POPUPS: PopupStore[] = [
     whiskyIds: ["ardbeg-10", "ardbeg-wee-beastie", "ardbeg-uigeadail"],
     tags: ["피트", "야외", "페어링"],
     accent: "#4c6b3a",
+    imageUrl: "",
     sample: true,
   },
   {
@@ -224,6 +235,7 @@ export const SEED_POPUPS: PopupStore[] = [
     whiskyIds: ["ki-one-batch"],
     tags: ["한국 위스키", "블라인드", "시음"],
     accent: "#c0641a",
+    imageUrl: "",
     sample: true,
   },
 ];

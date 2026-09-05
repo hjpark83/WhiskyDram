@@ -77,6 +77,20 @@ export function PopupForm({ initial }: { initial?: PopupRecord | null }) {
               ))}
             </select>
           </Field>
+          <Field
+            label="대표 사진 주소"
+            className="sm:col-span-2"
+            hint="https:// 로 시작하는 이미지 주소. 비워두면 브랜드 색 그라데이션이 대신 나와요. 브랜드가 공개한 보도자료 사진이나 직접 찍은 사진을 쓰세요."
+          >
+            <Input
+              name="imageUrl"
+              type="url"
+              inputMode="url"
+              placeholder="https://…/photo.jpg"
+              defaultValue={initial?.imageUrl ?? ""}
+              maxLength={500}
+            />
+          </Field>
           <Field label="강조색" hint="카드 위 띠 색">
             <Input type="color" name="accent" defaultValue={initial?.accent ?? "#d9a441"} className="h-9 w-24 p-1" />
           </Field>

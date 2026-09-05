@@ -61,6 +61,17 @@ export default async function PopupDetailPage({ params }: PageProps<"/popup/[id]
         <ArrowLeft className="size-4" aria-hidden /> 팝업 목록
       </Button>
 
+      {popup.imageUrl && (
+        <div
+          className="relative aspect-[21/9] w-full overflow-hidden rounded-2xl"
+          style={{ background: `linear-gradient(135deg, ${popup.accent}, ${popup.accent}22)` }}
+        >
+          {/* 관리자가 넣는 임의의 주소라 next/image 최적화를 안 거쳐요 */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={popup.imageUrl} alt="" className="size-full object-cover" />
+        </div>
+      )}
+
       <header className="space-y-3">
         <div
           className="h-1.5 w-24 rounded-full"

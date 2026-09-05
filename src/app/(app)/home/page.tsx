@@ -8,6 +8,7 @@ import { PopupCard } from "@/components/popup/popup-card";
 import { TasteBars } from "@/components/whisky/taste-bars";
 import { getWhiskies, WHISKIES } from "@/data/whiskies";
 import type { RecommendationPayload } from "@/lib/ai/recommend";
+import { rethrowIfFrameworkError } from "@/lib/next-error";
 import { popupStatus, sortPopups } from "@/lib/popup/format";
 import { listPopups } from "@/lib/popup/store";
 import { createClient } from "@/lib/supabase/server";
@@ -73,21 +74,27 @@ export default async function HomePage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ data: profileRow }, { data: rec }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("display_name, taste_profile")
-      .eq("id", user.id)
-      .maybeSingle(),
-    supabase
-      .from("recommendations")
-      .select("payload, whisky_ids, created_at")
-      .eq("user_id", user.id)
-      .in("source", ["quiz", "review"])
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-  ]);
+  // DB 가 잠깐 안 되더라도 홈은 열려야 해요 (빈 상태로라도)
+  let profileRow: { display_name: string | null; taste_profile: unknown } | null = null;
+  let rec: { payload: unknown; whisky_ids: unknown; created_at: string } | null = null;
+  try {
+    const [profileRes, recRes] = await Promise.all([
+      supabase.from("profiles").select("display_name, taste_profile").eq("id", user.id).maybeSingle(),
+      supabase
+        .from("recommendations")
+        .select("payload, whisky_ids, created_at")
+        .eq("user_id", user.id)
+        .in("source", ["quiz", "review"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+    profileRow = profileRes.data;
+    rec = recRes.data;
+  } catch (error) {
+    rethrowIfFrameworkError(error);
+    console.warn("[home] 프로필·추천을 읽지 못했어요", error);
+  }
 
   // 지금 열려 있거나 곧 열릴 팝업 두 개만
   const livePopups = sortPopups(
@@ -99,7 +106,7 @@ export default async function HomePage() {
     ? { ...EMPTY_TASTE_PROFILE, ...stored }
     : null;
   const payload = (rec?.payload as RecommendationPayload | undefined) ?? null;
-  const picks = rec ? getWhiskies(rec.whisky_ids as string[]) : [];
+  const picks = rec ? getWhiskies((rec.whisky_ids as string[]) ?? []) : [];
   const name = profileRow?.display_name ?? user.email?.split("@")[0] ?? "";
 
   return (

@@ -18,17 +18,21 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+/**
+ * 메뉴가 10개라 좁은 화면에서는 긴 이름이 다 안 들어가요.
+ * 그래서 `short` 를 기본으로 보여주고, 넓은 화면(xl)에서만 `label` 을 보여줘요.
+ */
 const nav = [
-  { href: "/home", label: "홈", icon: Home },
-  { href: "/quiz", label: "취향 진단", icon: Compass },
-  { href: "/recommend", label: "내 추천", icon: Sparkles },
-  { href: "/chat", label: "AI 소믈리에", icon: MessageCircle },
-  { href: "/whisky", label: "위스키 탐색", icon: Search },
-  { href: "/scan", label: "병 스캔", icon: Camera },
-  { href: "/journal", label: "테이스팅 노트", icon: NotebookPen },
-  { href: "/map", label: "증류소 지도", icon: Globe2 },
-  { href: "/popup", label: "팝업 스토어", icon: Store },
-  { href: "/glossary", label: "용어 사전", icon: BookOpen },
+  { href: "/home", label: "홈", short: "홈", icon: Home },
+  { href: "/quiz", label: "취향 진단", short: "진단", icon: Compass },
+  { href: "/recommend", label: "내 추천", short: "추천", icon: Sparkles },
+  { href: "/chat", label: "AI 소믈리에", short: "소믈리에", icon: MessageCircle },
+  { href: "/whisky", label: "위스키 탐색", short: "탐색", icon: Search },
+  { href: "/scan", label: "병 스캔", short: "스캔", icon: Camera },
+  { href: "/journal", label: "테이스팅 노트", short: "노트", icon: NotebookPen },
+  { href: "/map", label: "증류소 지도", short: "지도", icon: Globe2 },
+  { href: "/popup", label: "팝업 스토어", short: "팝업", icon: Store },
+  { href: "/glossary", label: "용어 사전", short: "용어", icon: BookOpen },
 ];
 
 /** 모바일 하단 탭에 넣을 5개 */
@@ -49,20 +53,21 @@ export function SiteHeader({
   return (
     <>
       <header className="sticky top-0 z-40 bg-background/85 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4">
+        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-4">
           <Link href="/home" className="brand shrink-0 text-lg font-bold text-amber-300">
             🥃 FirstDram
           </Link>
-          <nav className="hidden gap-0.5 overflow-x-auto sm:flex">
+          <nav className="no-scrollbar hidden min-w-0 gap-0.5 overflow-x-auto sm:flex">
             {nav.map((item) => (
               <Button
                 key={item.href}
                 variant="ghost"
                 size="sm"
                 className={cn(isActive(item.href) && "bg-amber-500/10 text-amber-300")}
-                render={<Link href={item.href} />}
+                render={<Link href={item.href} title={item.label} />}
               >
-                {item.label}
+                <span className="xl:hidden">{item.short}</span>
+                <span className="hidden xl:inline">{item.label}</span>
               </Button>
             ))}
           </nav>
@@ -121,7 +126,7 @@ export function SiteHeader({
                   )}
                 >
                   <Icon className={cn("size-5", active && "fill-amber-500/30")} aria-hidden />
-                  {item.label.replace("AI ", "").replace("위스키 ", "")}
+                  {item.short}
                 </Link>
               </li>
             );

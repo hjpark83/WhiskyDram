@@ -1,11 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { signIn, signInWithGoogle, signUp, type AuthState } from "./actions";
+import { resendConfirmation, signIn, signInWithGoogle, signUp, type AuthState } from "./actions";
 
 
 function CredentialsForm({
@@ -21,8 +21,11 @@ function CredentialsForm({
   withNickname?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(action, null);
+  // 확인 메일을 다시 보낼 때 쓰려고 입력한 이메일을 들고 있어요
+  const [email, setEmail] = useState("");
 
   return (
+    <>
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="next" value={next} />
       {withNickname && (
@@ -48,6 +51,8 @@ function CredentialsForm({
           type="email"
           autoComplete="email"
           placeholder="you@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           required
         />
       </div>
@@ -76,6 +81,32 @@ function CredentialsForm({
       <Button type="submit" className="w-full" disabled={pending}>
         {pending ? "잠시만요…" : submitLabel}
       </Button>
+    </form>
+    {state?.code === "email_not_confirmed" && <ResendConfirmation email={email} />}
+    </>
+  );
+}
+
+/** 가입은 됐는데 메일 링크를 못 누른 경우 다시 보내요 */
+function ResendConfirmation({ email }: { email: string }) {
+  const [state, formAction, pending] = useActionState<AuthState, FormData>(resendConfirmation, null);
+
+  return (
+    <form action={formAction} className="mt-3 space-y-2">
+      <input type="hidden" name="email" value={email} />
+      <Button type="submit" variant="outline" size="sm" className="w-full" disabled={pending}>
+        {pending ? "보내는 중…" : "확인 메일 다시 보내기"}
+      </Button>
+      {state?.error && (
+        <p className="text-sm text-destructive" role="alert">
+          {state.error}
+        </p>
+      )}
+      {state?.message && (
+        <p className="text-sm text-amber-300" role="status">
+          {state.message}
+        </p>
+      )}
     </form>
   );
 }
