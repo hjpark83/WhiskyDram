@@ -80,6 +80,12 @@ const popupSchema = z.object({
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/, { error: "색은 #rrggbb 형식이어야 해요." })
     .default("#d9a441"),
+  imageUrl: z
+    .string()
+    .trim()
+    .max(500)
+    .refine((v) => v === "" || /^https:\/\//i.test(v), { error: "사진 주소는 https:// 로 시작해야 해요." })
+    .default(""),
   published: z.boolean().default(true),
 });
 
@@ -105,6 +111,7 @@ function readForm(formData: FormData) {
     whiskyIds: get("whiskyIds"),
     tags: get("tags"),
     accent: get("accent") || "#d9a441",
+    imageUrl: get("imageUrl"),
     published: formData.get("published") === "on",
   });
 }
@@ -145,6 +152,7 @@ export async function savePopup(_prev: AdminState, formData: FormData): Promise<
       whisky_ids: commas(v.whiskyIds),
       tags: commas(v.tags),
       accent: v.accent,
+      image_url: v.imageUrl,
       published: v.published,
       created_by: admin.id,
     },
@@ -221,6 +229,7 @@ export async function importSeedPopups(): Promise<void> {
       whisky_ids: p.whiskyIds,
       tags: p.tags,
       accent: p.accent,
+      image_url: p.imageUrl,
       published: true,
       created_by: admin.id,
     })),

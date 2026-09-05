@@ -212,6 +212,7 @@ create table if not exists public.popup_stores (
   whisky_ids text[] not null default '{}',    -- src/data/whiskies.ts 의 id
   tags text[] not null default '{}',
   accent text not null default '#d9a441',
+  image_url text not null default '',        -- 대표 사진 (관리자가 넣어요)
   published boolean not null default true,
   -- AI 가 웹 검색으로 만든 초안인지. true 면 관리자가 출처를 확인하고 공개해요.
   ai_generated boolean not null default false,
@@ -227,6 +228,7 @@ create table if not exists public.popup_stores (
 alter table public.popup_stores add column if not exists ai_generated boolean not null default false;
 alter table public.popup_stores add column if not exists sources jsonb not null default '[]'::jsonb;
 alter table public.popup_stores add column if not exists ai_note text;
+alter table public.popup_stores add column if not exists image_url text not null default '';
 
 create index if not exists popup_stores_period_idx on public.popup_stores (end_date desc, start_date desc);
 

@@ -40,6 +40,7 @@ interface PopupRow {
   whisky_ids: string[] | null;
   tags: string[] | null;
   accent: string | null;
+  image_url: string | null;
   published: boolean | null;
   ai_generated: boolean | null;
   sources: unknown;
@@ -86,6 +87,7 @@ function toRecord(row: PopupRow): PopupRecord {
     whiskyIds: row.whisky_ids ?? [],
     tags: row.tags ?? [],
     accent: row.accent ?? "#d9a441",
+    imageUrl: typeof row.image_url === "string" && /^https?:\/\//i.test(row.image_url) ? row.image_url : "",
     sample: false,
     published: row.published ?? true,
     source: "db",
@@ -109,7 +111,7 @@ function seedRecords(): PopupRecord[] {
 }
 
 const COLUMNS =
-  "id, brand, brand_en, title, summary, description, highlights, venue, address, city, start_date, end_date, hours, entry, reservation, links, whisky_ids, tags, accent, published, ai_generated, sources, ai_note";
+  "id, brand, brand_en, title, summary, description, highlights, venue, address, city, start_date, end_date, hours, entry, reservation, links, whisky_ids, tags, accent, image_url, published, ai_generated, sources, ai_note";
 
 export async function listPopups(opts: { includeUnpublished?: boolean } = {}): Promise<PopupRecord[]> {
   try {

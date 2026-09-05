@@ -122,6 +122,14 @@
 }
 
 @layer components {
+  /* 넘치면 스크롤은 되지만 막대는 안 보이게 (헤더 메뉴처럼 가로로 긴 것) */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
   .brand {
     font-family: var(--font-brand), var(--font-heading), serif;
     font-weight: 600;

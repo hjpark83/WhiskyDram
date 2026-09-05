@@ -33,12 +33,29 @@ export function PopupCard({ popup }: { popup: PopupStore }) {
   return (
     <Link href={`/popup/${popup.id}`} className="group block">
       <Card className={cn("h-full overflow-hidden transition-colors group-hover:border-amber-400/60", status === "ended" && "opacity-70")}>
-        {/* 브랜드 색 띠 */}
-        <div
-          className="h-1.5 w-full"
-          style={{ background: `linear-gradient(90deg, ${popup.accent}, ${popup.accent}22)` }}
-          aria-hidden
-        />
+        {/* 대표 사진. 없거나 못 불러오면 뒤에 깔린 브랜드 색이 그대로 보여요. */}
+        {popup.imageUrl ? (
+          <div
+            className="relative aspect-[16/9] w-full overflow-hidden"
+            style={{ background: `linear-gradient(135deg, ${popup.accent}, ${popup.accent}22)` }}
+          >
+            {/* 관리자가 넣는 임의의 주소라 next/image 최적화를 안 거쳐요 */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={popup.imageUrl}
+              alt=""
+              loading="lazy"
+              className="size-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            />
+            <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/70 to-transparent" aria-hidden />
+          </div>
+        ) : (
+          <div
+            className="h-1.5 w-full"
+            style={{ background: `linear-gradient(90deg, ${popup.accent}, ${popup.accent}22)` }}
+            aria-hidden
+          />
+        )}
         <CardContent className="flex h-full flex-col gap-3 p-5">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
