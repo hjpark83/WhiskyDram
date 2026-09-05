@@ -107,7 +107,9 @@ export default async function RecommendPage() {
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary">
               <Sparkles data-icon="inline-start" />
-              {payload.generatedBy === "claude" ? "AI 소믈리에 추천" : "기본 추천"}
+              {payload.generatedBy === "fallback"
+                ? "기본 추천"
+                : `AI 소믈리에 추천${payload.provider ? ` · ${payload.provider}` : ""}`}
             </Badge>
             <span className="text-xs text-muted-foreground">{createdAt} 진단</span>
           </div>
