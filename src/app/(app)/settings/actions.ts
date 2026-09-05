@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { nicknameSchema } from "@/app/login/actions";
+import { nicknameSchema } from "@/lib/auth/nickname";
 import { createClient } from "@/lib/supabase/server";
 
 export type SettingsState = { error?: string; message?: string } | null;
