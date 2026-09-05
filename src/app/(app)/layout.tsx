@@ -13,11 +13,18 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     redirect("/login");
   }
 
-  const admin = await isAdmin();
+  const [admin, { data: profile }] = await Promise.all([
+    isAdmin(),
+    supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle(),
+  ]);
 
   return (
     <>
-      <SiteHeader email={user.email ?? null} isAdmin={admin} />
+      <SiteHeader
+        email={user.email ?? null}
+        displayName={profile?.display_name ?? null}
+        isAdmin={admin}
+      />
       <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 pb-24 sm:py-8">{children}</div>
     </>
   );

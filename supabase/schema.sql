@@ -150,6 +150,8 @@ create policy "admins: read own row"
   on public.admins for select using (auth.uid() = user_id);
 
 -- 가입 시 프로필 생성 + 관리자 이메일이면 자동 승격
+--   닉네임은 가입 폼에서 받은 값(raw_user_meta_data.display_name)을 먼저 쓰고,
+--   구글 로그인은 구글이 준 이름(full_name / name)을, 둘 다 없으면 이메일 아이디를 써요.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -157,7 +159,15 @@ security definer set search_path = public
 as $$
 begin
   insert into public.profiles (id, display_name)
-  values (new.id, split_part(new.email, '@', 1))
+  values (
+    new.id,
+    coalesce(
+      nullif(trim(new.raw_user_meta_data ->> 'display_name'), ''),
+      nullif(trim(new.raw_user_meta_data ->> 'full_name'), ''),
+      nullif(trim(new.raw_user_meta_data ->> 'name'), ''),
+      split_part(new.email, '@', 1)
+    )
+  )
   on conflict (id) do nothing;
 
   if exists (
@@ -203,11 +213,20 @@ create table if not exists public.popup_stores (
   tags text[] not null default '{}',
   accent text not null default '#d9a441',
   published boolean not null default true,
+  -- AI 가 웹 검색으로 만든 초안인지. true 면 관리자가 출처를 확인하고 공개해요.
+  ai_generated boolean not null default false,
+  sources jsonb not null default '[]'::jsonb,   -- ["https://…"] 근거 주소
+  ai_note text,                                  -- 무엇을 확인해야 하는지
   created_by uuid references auth.users (id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   check (end_date >= start_date)
 );
+
+-- 이전 버전으로 표를 이미 만들었다면 컬럼만 채워줘요
+alter table public.popup_stores add column if not exists ai_generated boolean not null default false;
+alter table public.popup_stores add column if not exists sources jsonb not null default '[]'::jsonb;
+alter table public.popup_stores add column if not exists ai_note text;
 
 create index if not exists popup_stores_period_idx on public.popup_stores (end_date desc, start_date desc);
 
