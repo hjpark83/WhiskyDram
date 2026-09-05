@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
+import { geminiKey } from "@/lib/ai/gemini";
 import { activeProvider, AiError, toAiError, type ProviderInfo } from "@/lib/ai/provider";
 
 /**
@@ -51,7 +52,7 @@ export async function researchWeb(prompt: string): Promise<ResearchResult> {
 // ── Gemini: google_search 그라운딩 (네이티브 REST) ───────────────────────────
 
 async function researchGemini(prompt: string, provider: ProviderInfo): Promise<ResearchResult> {
-  const key = process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_API_KEY?.trim();
+  const key = geminiKey();
   if (!key) throw new AiError("GEMINI_API_KEY 가 없어요.", "auth");
 
   const res = await fetch(

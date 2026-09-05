@@ -69,12 +69,13 @@ AI 기능은 전부 두 가지 호출로 정리돼 있어요 (`src/lib/ai/provid
 
 - **Claude**: 네이티브 SDK. `messages.parse()` + `zodOutputFormat` 으로 구조화 출력, 시스템 프롬프트는 프롬프트 캐싱.
 - **ChatGPT**: `openai` SDK. `response_format: json_schema` (strict).
-- **Gemini**: 같은 `openai` SDK 를 OpenAI 호환 엔드포인트(`generativelanguage.googleapis.com/v1beta/openai/`)로 붙여 써요.
+- **Gemini**: 네이티브 REST (`generateContent` / `streamGenerateContent`). 구조화 출력은 `responseSchema`,
+  도구는 `functionDeclarations` 로 옮겨 넣어요 (zod → JSON Schema → Gemini 스키마 변환은 `gemini.ts`).
 
 바꾸는 방법은 키를 넣고 `AI_PROVIDER` 를 지정하는 것뿐이고, 기능 코드는 손대지 않아요.
 스키마 모드를 못 받는 모델이면 JSON 모드로 자동 재시도해요.
 
-웹 검색(`researchWeb`)은 프로바이더의 **검색 그라운딩**을 써요 — Gemini `google_search`,
+웹 검색(`researchWeb`)은 프로바이더의 **검색 그라운딩**을 써요 — Gemini `google_search`(네이티브),
 OpenAI Responses API `web_search`, Claude `web_search` 서버 도구. 캐치테이블·네이버 HTML 을
 직접 긁지 않아요 (약관 문제도 있고, 두 곳 다 봇 차단이 걸린 JS 페이지라 서버에서 긁으면 막혀요).
 
@@ -82,14 +83,18 @@ OpenAI Responses API `web_search`, Claude `web_search` 서버 도구. 캐치테�
 
 1. [aistudio.google.com/apikey](https://aistudio.google.com/apikey) 접속 → 구글 계정 로그인
 2. **Create API key** → 기존 Google Cloud 프로젝트를 고르거나 새로 만들기
-3. 만들어진 키(`AIza…`)를 복사
+3. 만들어진 키를 복사 — 요즘은 `AQ.` 로 시작하는 새 형식으로 나와요 (예전엔 `AIza…`). 둘 다 정상이에요.
 4. 로컬은 `.env.local`, 배포는 Vercel → Settings → Environment Variables 에 넣기
 
 ```
 AI_PROVIDER=gemini
-GEMINI_API_KEY=AIza...
-GEMINI_MODEL=gemini-2.5-flash   # 선택. 품질을 올리려면 gemini-2.5-pro
+GEMINI_API_KEY=AQ....             # AIza... 형식도 그대로 동작해요
+GEMINI_MODEL=gemini-2.5-flash     # 선택. 품질을 올리려면 gemini-2.5-pro
 ```
+
+> Gemini 는 OpenAI 호환 경로(`/v1beta/openai/`)가 아니라 **네이티브 API** 로 붙여요
+> (`src/lib/ai/gemini.ts`). 새 `AQ.` 키가 호환 경로에서 401 로 막힌다는 보고가 많고,
+> 검색 그라운딩(`google_search`)도 호환 경로엔 없어서예요.
 
 무료 등급이 있지만 분당·하루 요청 수 제한이 있어요. 제한에 걸리면 앱은 규칙 기반 폴백으로
 넘어가고, `/api/health` 에서 지금 어떤 프로바이더가 잡혔는지 확인할 수 있어요.
@@ -150,8 +155,8 @@ src/
 │   └── quiz.ts               # 진단 질문 + 축 델타
 ├── components/ui/            # shadcn
 ├── lib/
-│   ├── ai/                   # provider.ts (Claude/OpenAI/Gemini 어댑터), web-research.ts
-│   │                         # (검색 그라운딩) + 기능별 프롬프트
+│   ├── ai/                   # provider.ts (어댑터), gemini.ts (네이티브 REST),
+│   │                         # web-research.ts (검색 그라운딩) + 기능별 프롬프트
 │   ├── auth/admin.ts         # 관리자 확인
 │   ├── popup/                # 팝업 상태 계산, 링크 만들기, DB↔시드 로더
 │   ├── supabase/             # browser / server / proxy 클라이언트

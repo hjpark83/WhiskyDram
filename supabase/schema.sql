@@ -251,12 +251,14 @@ create trigger popup_stores_set_updated_at
 -- ---------------------------------------------------------------------------
 -- 관리자 지정 (여기만 본인 것으로 바꿔서 실행하세요)
 -- ---------------------------------------------------------------------------
--- 1) 앞으로 이 이메일로 가입하면 자동으로 관리자가 돼요.
--- insert into public.admin_emails (email, note)
--- values ('me@example.com', '사이트 운영자')
--- on conflict (email) do nothing;
+-- 1) 이 이메일로 가입하면 자동으로 관리자가 돼요 (다시 가입하거나 계정을 옮길 때 대비).
+insert into public.admin_emails (email, note)
+values ('junippini83@naver.com', '사이트 운영자')
+on conflict (email) do nothing;
 
--- 2) 이미 가입한 계정을 지금 바로 관리자로 올릴 때.
--- insert into public.admins (user_id)
--- select id from auth.users where lower(email) = lower('me@example.com')
--- on conflict (user_id) do nothing;
+-- 2) 이미 가입한 계정을 지금 바로 관리자로 올려요.
+insert into public.admins (user_id)
+select id from auth.users where lower(email) = lower('junippini83@naver.com')
+on conflict (user_id) do nothing;
+
+-- 운영자를 더 추가하려면 위 두 줄의 이메일만 바꿔서 다시 실행하세요.
