@@ -1,5 +1,12 @@
-import Anthropic from "@anthropic-ai/sdk";
-import { CLAUDE_MODEL, getAnthropic } from "@/lib/ai/client";
+import {
+  activeProvider,
+  streamTurn,
+  toAiError,
+  userMessageFor,
+  type AiToolDef,
+  type AiToolResult,
+  type AiTurn,
+} from "@/lib/ai/provider";
 import { profileText, whiskyCard } from "@/lib/ai/recommend";
 import { getWhisky, WHISKIES } from "@/data/whiskies";
 import {
@@ -59,12 +66,12 @@ export interface ChatContext {
 const ORIGINS: Origin[] = ["scotch", "irish", "japanese", "american", "korean", "other"];
 const TYPES: WhiskyType[] = ["single_malt", "blended_scotch", "bourbon", "rye", "irish", "japanese", "other"];
 
-const TOOLS: Anthropic.Tool[] = [
+const TOOLS: AiToolDef[] = [
   {
     name: "search_whiskies",
     description:
       "위스키 사전(312병, 국내 유통 위주)에서 조건에 맞는 병을 찾아요. 병 이름을 언급하기 전에 반드시 이 도구로 확인하세요. 음식 이름(예: 삼겹살, 초콜릿)을 query 에 넣으면 어울리는 안주 정보도 검색돼요.",
-    input_schema: {
+    inputSchema: {
       type: "object",
       properties: {
         query: { type: "string", description: "자유 검색어. 이름·증류소·향 표현·음식 등. 선택." },
@@ -96,7 +103,7 @@ const TOOLS: Anthropic.Tool[] = [
   {
     name: "get_whisky_details",
     description: "특정 병의 상세 정보(향·맛·여운, 초보자 팁, 안주, 취향 적합도)를 가져와요. id 는 search_whiskies 결과의 id.",
-    input_schema: {
+    inputSchema: {
       type: "object",
       properties: { id: { type: "string" } },
       required: ["id"],
@@ -254,83 +261,69 @@ function buildSystemPrompt(ctx: ChatContext): string {
 const MAX_TOOL_ROUNDS = 5;
 
 export async function* runChat(turns: ChatTurn[], ctx: ChatContext): AsyncGenerator<ChatEvent> {
-  const client = getAnthropic();
-  if (!client) {
+  const provider = activeProvider();
+  if (!provider) {
     yield {
       type: "error",
-      message: "지금은 AI 소믈리에를 부를 수 없어요 (API 키 없음). 위스키 탐색에서 직접 찾아보세요.",
+      message: "지금은 AI 소믈리에를 부를 수 없어요 (AI 키 없음). 위스키 탐색에서 직접 찾아보세요.",
     };
     return;
   }
 
-  const messages: Anthropic.MessageParam[] = turns
+  const history: AiTurn[] = turns
     .filter((t) => t.content.trim())
-    .map((t) => ({ role: t.role, content: t.content }));
-  if (messages.length === 0 || messages[messages.length - 1].role !== "user") {
+    .map((t) =>
+      t.role === "user"
+        ? ({ role: "user", text: t.content } as AiTurn)
+        : ({ role: "assistant", text: t.content, toolCalls: [] } as AiTurn),
+    );
+  if (history.length === 0 || history[history.length - 1].role !== "user") {
     yield { type: "error", message: "질문을 입력해주세요." };
     return;
   }
 
-  const system: Anthropic.TextBlockParam[] = [
-    { type: "text", text: buildSystemPrompt(ctx), cache_control: { type: "ephemeral" } },
-  ];
+  const system = buildSystemPrompt(ctx);
 
   try {
     for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
-      const stream = client.messages.stream({
-        model: CLAUDE_MODEL,
-        max_tokens: 2048,
-        output_config: { effort: "low" },
-        system,
-        tools: TOOLS,
-        messages,
-      });
-
+      // 글자는 큐에 모아두고, 한 턴이 끝날 때까지 흘려보내요
       const queue: string[] = [];
-      stream.on("text", (delta) => queue.push(delta));
-
-      // finalMessage 를 기다리는 동안 텍스트를 흘려보내요
-      const finalPromise = stream.finalMessage();
       let settled = false;
-      finalPromise.then(() => (settled = true), () => (settled = true));
+      const pending = streamTurn({
+        system,
+        turns: history,
+        tools: TOOLS,
+        maxTokens: 2048,
+        onText: (delta) => queue.push(delta),
+      });
+      pending.then(
+        () => (settled = true),
+        () => (settled = true),
+      );
       while (!settled) {
         while (queue.length) yield { type: "text", text: queue.shift()! };
         await new Promise((r) => setTimeout(r, 40));
       }
       while (queue.length) yield { type: "text", text: queue.shift()! };
 
-      const message = await finalPromise;
+      const result = await pending;
+      if (result.toolCalls.length === 0) break;
 
-      if (message.stop_reason === "refusal") {
-        yield { type: "error", message: "그 질문에는 답하기 어려워요. 위스키 이야기로 돌아와볼까요?" };
-        return;
-      }
-      if (message.stop_reason !== "tool_use") break;
+      history.push({ role: "assistant", text: result.text, toolCalls: result.toolCalls });
 
-      const toolUses = message.content.filter(
-        (b): b is Anthropic.ToolUseBlock => b.type === "tool_use",
-      );
-      messages.push({ role: "assistant", content: message.content });
-
-      const results: Anthropic.ToolResultBlockParam[] = [];
-      for (const tu of toolUses) {
-        const r = executeTool(tu.name, tu.input, ctx);
+      const results: AiToolResult[] = [];
+      for (const call of result.toolCalls) {
+        const r = executeTool(call.name, call.input, ctx);
         yield { type: "tool", label: r.label };
         if (r.items.length) yield { type: "whiskies", items: r.items };
-        results.push({ type: "tool_result", tool_use_id: tu.id, content: r.text });
+        results.push({ id: call.id, name: call.name, content: r.text });
       }
-      messages.push({ role: "user", content: results });
+      history.push({ role: "tool", results });
     }
     yield { type: "done" };
   } catch (error) {
-    if (error instanceof Anthropic.RateLimitError) {
-      yield { type: "error", message: "지금 요청이 많아요. 잠시 후 다시 물어봐 주세요." };
-    } else if (error instanceof Anthropic.APIError) {
-      console.error(`[ai/chat] API error ${error.status}: ${error.message}`);
-      yield { type: "error", message: "AI 소믈리에가 잠시 자리를 비웠어요. 다시 시도해주세요." };
-    } else {
-      console.error("[ai/chat] unexpected error", error);
-      yield { type: "error", message: "문제가 생겼어요. 다시 시도해주세요." };
-    }
+    const err = toAiError(error);
+    console.error(`[ai/chat] ${provider.id} 실패 (${err.kind}): ${err.message}`);
+    yield { type: "error", message: userMessageFor(err.kind) };
   }
 }

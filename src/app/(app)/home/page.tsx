@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Camera, Compass, Globe2, MessageCircle, NotebookPen, Search, Sparkles } from "lucide-react";
+import { Camera, Compass, Globe2, MessageCircle, NotebookPen, Search, Sparkles, Store } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PopupCard } from "@/components/popup/popup-card";
 import { TasteBars } from "@/components/whisky/taste-bars";
 import { getWhiskies, WHISKIES } from "@/data/whiskies";
 import type { RecommendationPayload } from "@/lib/ai/recommend";
+import { popupStatus, sortPopups } from "@/lib/popup/format";
+import { listPopups } from "@/lib/popup/store";
 import { createClient } from "@/lib/supabase/server";
 import { hasProfile } from "@/lib/whisky/recommend";
 import { EMPTY_TASTE_PROFILE, type TasteProfile } from "@/lib/whisky/types";
@@ -48,6 +51,13 @@ const actions = [
     ready: true,
   },
   {
+    href: "/popup",
+    icon: Store,
+    title: "팝업 스토어 보기",
+    body: "한 병 사기 전에 한 잔으로. 브랜드 팝업 일정과 예약 링크를 모아뒀어요.",
+    ready: true,
+  },
+  {
     href: "/journal",
     icon: NotebookPen,
     title: "마신 후기 남기기",
@@ -78,6 +88,11 @@ export default async function HomePage() {
       .limit(1)
       .maybeSingle(),
   ]);
+
+  // 지금 열려 있거나 곧 열릴 팝업 두 개만
+  const livePopups = sortPopups(
+    (await listPopups()).filter((p) => popupStatus(p) !== "ended"),
+  ).slice(0, 2);
 
   const stored = (profileRow?.taste_profile as Partial<TasteProfile> | null) ?? null;
   const profile: TasteProfile | null = hasProfile(stored)
@@ -140,6 +155,29 @@ export default async function HomePage() {
               </div>
             </CardContent>
           </Card>
+        </section>
+      )}
+
+      {livePopups.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-end justify-between gap-2">
+            <div>
+              <h2 className="text-xl text-amber-100">지금 가볼 수 있는 팝업</h2>
+              <p className="text-sm text-muted-foreground">
+                한 병을 사기 전에 한 잔으로 먼저 맛보는 게 제일 싸요.
+              </p>
+            </div>
+            <Button size="sm" variant="ghost" render={<Link href="/popup" />}>
+              전체 보기
+            </Button>
+          </div>
+          <ul className="grid gap-4 sm:grid-cols-2">
+            {livePopups.map((p) => (
+              <li key={p.id}>
+                <PopupCard popup={p} />
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 

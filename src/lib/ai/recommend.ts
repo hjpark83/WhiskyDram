@@ -1,7 +1,5 @@
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
-import { CLAUDE_MODEL, getAnthropic } from "@/lib/ai/client";
+import { activeProvider, generateJson, toAiError } from "@/lib/ai/provider";
 import { AXIS_LABELS_KO, TASTE_AXES, type TasteProfile, type Whisky } from "@/lib/whisky/types";
 import { describeProfile, type ScoredWhisky } from "@/lib/whisky/recommend";
 import {
@@ -47,8 +45,10 @@ export interface RecommendationPayload {
   tasteSummary: string;
   picks: RecommendationPick[];
   nextStep: string;
-  generatedBy: "claude" | "fallback";
+  generatedBy: "ai" | "fallback";
   model: string | null;
+  /** 어떤 AI 로 만들었는지 (Claude / ChatGPT / Gemini). 폴백이면 null. */
+  provider?: string | null;
   basedOn?: RecommendationBasis;
 }
 
@@ -107,8 +107,8 @@ export interface GenerateInput {
 export async function generateQuizRecommendation(
   input: GenerateInput,
 ): Promise<RecommendationPayload> {
-  const client = getAnthropic();
-  if (!client || input.candidates.length < 3) return fallbackRecommendation(input);
+  const provider = activeProvider();
+  if (!provider || input.candidates.length < 3) return fallbackRecommendation(input);
 
   const ids = input.candidates.map((c) => c.whisky.id) as [string, ...string[]];
 
@@ -156,20 +156,15 @@ export async function generateQuizRecommendation(
   ].join("\n");
 
   try {
-    const response = await client.messages.parse({
-      model: CLAUDE_MODEL,
-      max_tokens: 4096,
-      output_config: { effort: "medium", format: zodOutputFormat(Schema) },
-      system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
-      messages: [{ role: "user", content: userMessage }],
+    const { data: out, model } = await generateJson({
+      system: SYSTEM_PROMPT,
+      user: userMessage,
+      schema: Schema,
+      schemaName: "quiz_recommendation",
+      maxTokens: 4096,
+      effort: "medium",
     });
 
-    if (response.stop_reason === "refusal" || !response.parsed_output) {
-      console.warn("[ai/recommend] no parsed output", response.stop_reason);
-      return fallbackRecommendation(input);
-    }
-
-    const out = response.parsed_output;
     // 같은 병이 두 번 나오면 폴백 후보로 채워요.
     const seen = new Set<string>();
     const picks: RecommendationPick[] = [];
@@ -190,15 +185,13 @@ export async function generateQuizRecommendation(
       tasteSummary: out.tasteSummary,
       picks,
       nextStep: out.nextStep,
-      generatedBy: "claude",
-      model: response.model,
+      generatedBy: "ai",
+      model,
+      provider: provider.label,
     };
   } catch (error) {
-    if (error instanceof Anthropic.APIError) {
-      console.error(`[ai/recommend] API error ${error.status}: ${error.message}`);
-    } else {
-      console.error("[ai/recommend] unexpected error", error);
-    }
+    const err = toAiError(error);
+    console.error(`[ai/recommend] ${provider.id} 실패 (${err.kind}): ${err.message}`);
     return fallbackRecommendation(input);
   }
 }

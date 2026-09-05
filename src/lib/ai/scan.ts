@@ -1,7 +1,5 @@
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
-import { CLAUDE_MODEL, getAnthropic } from "@/lib/ai/client";
+import { activeProvider, generateJson, toAiError } from "@/lib/ai/provider";
 import { profileText } from "@/lib/ai/recommend";
 import { WHISKIES } from "@/data/whiskies";
 import { hasProfile, matchPercent } from "@/lib/whisky/recommend";
@@ -22,8 +20,10 @@ export interface ScanPayload {
     caution: string | null;
   } | null;
   percent: number | null;
-  generatedBy: "claude" | "fallback";
+  generatedBy: "ai" | "fallback";
   model: string | null;
+  /** 어떤 AI 로 읽었는지 (Claude / ChatGPT / Gemini). 폴백이면 null. */
+  provider?: string | null;
 }
 
 // 사전 목록은 매 요청 같으니 시스템 프롬프트에 넣고 캐시해요.
@@ -49,8 +49,8 @@ export interface ScanInput {
 }
 
 export async function scanBottle(input: ScanInput): Promise<ScanPayload> {
-  const client = getAnthropic();
-  if (!client) return fallbackScan();
+  const provider = activeProvider();
+  if (!provider) return fallbackScan();
 
   const ids = ["unknown", ...WHISKIES.map((w) => w.id)] as [string, ...string[]];
   const personalized = hasProfile(input.profile);
@@ -80,30 +80,16 @@ export async function scanBottle(input: ScanInput): Promise<ScanPayload> {
     : "이 병을 사전에서 찾아주세요. 취향 프로필이 아직 없으니 verdict 는 초보자에게 어떤 병인지 일반적인 설명으로 채워주세요.";
 
   try {
-    const response = await client.messages.parse({
-      model: CLAUDE_MODEL,
-      max_tokens: 2048,
-      output_config: { effort: "medium", format: zodOutputFormat(Schema) },
-      system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: { type: "base64", media_type: input.mediaType, data: input.imageBase64 },
-            },
-            { type: "text", text: userText },
-          ],
-        },
-      ],
+    const { data: out, model } = await generateJson({
+      system: SYSTEM_PROMPT,
+      user: userText,
+      images: [{ mediaType: input.mediaType, base64: input.imageBase64 }],
+      schema: Schema,
+      schemaName: "bottle_scan",
+      maxTokens: 2048,
+      effort: "medium",
     });
 
-    if (response.stop_reason === "refusal" || !response.parsed_output) {
-      console.warn("[ai/scan] no parsed output", response.stop_reason);
-      return fallbackScan();
-    }
-    const out = response.parsed_output;
     const whiskyId = out.whiskyId === "unknown" ? null : out.whiskyId;
     const whisky = whiskyId ? WHISKIES.find((w) => w.id === whiskyId) : undefined;
     const percent = whisky && input.profile ? matchPercent(input.profile, whisky) : null;
@@ -117,15 +103,13 @@ export async function scanBottle(input: ScanInput): Promise<ScanPayload> {
       alternatives: out.alternatives.filter((a) => a !== "unknown" && a !== whiskyId),
       verdict: whisky ? out.verdict : null,
       percent,
-      generatedBy: "claude",
-      model: response.model,
+      generatedBy: "ai",
+      model,
+      provider: provider.label,
     };
   } catch (error) {
-    if (error instanceof Anthropic.APIError) {
-      console.error(`[ai/scan] API error ${error.status}: ${error.message}`);
-    } else {
-      console.error("[ai/scan] unexpected error", error);
-    }
+    const err = toAiError(error);
+    console.error(`[ai/scan] ${provider.id} 실패 (${err.kind}): ${err.message}`);
     return fallbackScan();
   }
 }

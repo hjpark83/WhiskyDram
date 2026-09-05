@@ -1,7 +1,5 @@
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
-import { CLAUDE_MODEL, getAnthropic } from "@/lib/ai/client";
+import { activeProvider, generateJson, toAiError } from "@/lib/ai/provider";
 import {
   profileText,
   templatePick,
@@ -69,8 +67,8 @@ function historyText(history: NoteHistoryItem[]): string {
 }
 
 export async function generateJournalRecommendation(input: JournalInput): Promise<JournalResult> {
-  const client = getAnthropic();
-  if (!client || input.candidates.length < 3) return fallbackJournal(input);
+  const provider = activeProvider();
+  if (!provider || input.candidates.length < 3) return fallbackJournal(input);
 
   const ids = input.candidates.map((c) => c.whisky.id) as [string, ...string[]];
   const delta = z.number().int().min(-2).max(2);
@@ -130,19 +128,14 @@ export async function generateJournalRecommendation(input: JournalInput): Promis
   ].join("\n");
 
   try {
-    const response = await client.messages.parse({
-      model: CLAUDE_MODEL,
-      max_tokens: 4096,
-      output_config: { effort: "medium", format: zodOutputFormat(Schema) },
-      system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
-      messages: [{ role: "user", content: userMessage }],
+    const { data: out, model } = await generateJson({
+      system: SYSTEM_PROMPT,
+      user: userMessage,
+      schema: Schema,
+      schemaName: "journal_analysis",
+      maxTokens: 4096,
+      effort: "medium",
     });
-
-    if (response.stop_reason === "refusal" || !response.parsed_output) {
-      console.warn("[ai/journal] no parsed output", response.stop_reason);
-      return fallbackJournal(input);
-    }
-    const out = response.parsed_output;
 
     const seen = new Set<string>();
     const picks: RecommendationPick[] = [];
@@ -181,17 +174,15 @@ export async function generateJournalRecommendation(input: JournalInput): Promis
         tasteSummary: out.tasteSummary,
         picks,
         nextStep: out.nextStep,
-        generatedBy: "claude",
-        model: response.model,
+        generatedBy: "ai",
+        model,
+        provider: provider.label,
         basedOn,
       },
     };
   } catch (error) {
-    if (error instanceof Anthropic.APIError) {
-      console.error(`[ai/journal] API error ${error.status}: ${error.message}`);
-    } else {
-      console.error("[ai/journal] unexpected error", error);
-    }
+    const err = toAiError(error);
+    console.error(`[ai/journal] ${provider.id} 실패 (${err.kind}): ${err.message}`);
     return fallbackJournal(input);
   }
 }

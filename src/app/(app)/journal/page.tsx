@@ -17,7 +17,7 @@ interface NoteAnalysis {
   disliked?: string[];
   deltas?: Partial<TasteProfile>;
   explanation?: string;
-  generatedBy?: "claude" | "fallback";
+  generatedBy?: "ai" | "claude" | "fallback";
 }
 
 const OPTIONS: WhiskyOption[] = WHISKIES.map((w) => ({
