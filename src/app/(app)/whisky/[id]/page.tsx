@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, GitCompareArrows, Lightbulb, MapPin, NotebookPen, Utensils } from "lucide-react";
+import { ArrowLeft, GitCompareArrows, Lightbulb, MapPin, NotebookPen, Store, Utensils } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,9 @@ import { LiquidSwatch } from "@/components/whisky/liquid-swatch";
 import { GlossaryText } from "@/components/whisky/term";
 import { MatchBadge, WhiskyCard } from "@/components/whisky/whisky-card";
 import { getWhisky } from "@/data/whiskies";
+import { PopupStatusBadge } from "@/components/popup/popup-card";
+import { formatPeriod, popupStatus, statusNote } from "@/lib/popup/format";
+import { listPopups } from "@/lib/popup/store";
 import { createClient } from "@/lib/supabase/server";
 import {
   DIFFICULTY_LABELS_KO,
@@ -57,6 +60,11 @@ export default async function WhiskyDetailPage({ params }: PageProps<"/whisky/[i
   const percent = profile ? matchPercent(profile, w) : null;
   const similar = similarByFlavor(w, 3);
 
+  // 이 병을 맛볼 수 있는, 아직 끝나지 않은 팝업
+  const popups = (await listPopups()).filter(
+    (p) => p.whiskyIds.includes(w.id) && popupStatus(p) !== "ended",
+  );
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between gap-2">
@@ -75,6 +83,30 @@ export default async function WhiskyDetailPage({ params }: PageProps<"/whisky/[i
           </Button>
         </div>
       </div>
+
+      {popups.length > 0 && (
+        <ul className="space-y-2">
+          {popups.map((p) => (
+            <li key={p.id}>
+              <Link
+                href={`/popup/${p.id}`}
+                className="flex items-center gap-3 rounded-xl border border-amber-400/30 bg-amber-500/8 p-3 transition-colors hover:border-amber-400/70"
+              >
+                <Store className="size-4 shrink-0 text-amber-400" aria-hidden />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-amber-100">
+                    이 병을 한 잔으로 맛볼 수 있어요 — {p.title}
+                  </span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {p.brand} · {formatPeriod(p)} · {p.city} · {statusNote(p)}
+                  </span>
+                </span>
+                <PopupStatusBadge popup={p} className="shrink-0" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <header className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
