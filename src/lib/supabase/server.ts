@@ -19,6 +19,10 @@ export const SUPABASE_CONFIG_MESSAGE =
   "사이트 설정이 비어 있어요 (Supabase 주소·키). Vercel 환경변수에 NEXT_PUBLIC_SUPABASE_URL 과 NEXT_PUBLIC_SUPABASE_ANON_KEY 를 Production·Preview 양쪽에 넣고 다시 배포해주세요.";
 
 export async function createClient() {
+  // cookies() 를 **먼저** 불러야 해요. 이게 Next 에 "이 페이지는 동적"이라고 알리는 신호라,
+  // 앞에서 다른 예외를 던지면 빌드 때 프리렌더 실패로 잡혀서 배포 자체가 깨져요.
+  const cookieStore = await cookies();
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
   if (!url || !anonKey) {
@@ -27,8 +31,6 @@ export async function createClient() {
       `[supabase] 환경변수가 없어요 — URL:${url ? "있음" : "없음"} KEY:${anonKey ? "있음" : "없음"}. ${SUPABASE_CONFIG_MESSAGE}`,
     );
   }
-
-  const cookieStore = await cookies();
 
   return createServerClient(url, anonKey, {
     cookies: {
