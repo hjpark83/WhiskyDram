@@ -200,6 +200,29 @@
 }
 .globe-marker:hover .globe-pin-inner::after, .globe-marker.is-selected .globe-pin-inner::after { opacity: 1; }
 .globe-marker.is-dim .globe-pin-inner { opacity: 0.55; }
+/* 겹친 증류소 묶음 (숫자 뱃지) — 누르면 확대되면서 흩어져요 */
+.globe-count-inner {
+  position: relative; min-width: 32px; height: 32px; padding: 0 0.4rem;
+  border-radius: 999px; display: flex; align-items: center; justify-content: center;
+  background: rgba(26, 18, 12, 0.9); color: #f0c96a;
+  border: 1.5px solid rgba(217, 164, 65, 0.7);
+  box-shadow: 0 0 0 5px rgba(217, 164, 65, 0.1), 0 6px 18px rgba(0, 0, 0, 0.5);
+  transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.globe-count-inner b { font-size: 13px; font-weight: 700; line-height: 1; }
+.globe-count-inner::after {
+  content: attr(data-label); position: absolute; top: 100%; left: 50%;
+  transform: translate(-50%, 5px); white-space: nowrap; font-size: 11px;
+  color: #f3e7d3; background: rgba(26, 18, 12, 0.9); padding: 2px 7px; border-radius: 6px;
+  border: 1px solid rgba(217, 164, 65, 0.3);
+  opacity: 0; transition: opacity 0.15s ease; pointer-events: none;
+}
+.globe-marker:hover .globe-count-inner {
+  transform: scale(1.15); background: #d9a441; color: #1a120c; border-color: #fff8e6;
+}
+.globe-marker:hover .globe-count-inner::after { opacity: 1; }
+/* 핀이 몇 개 안 남았으면 이름을 계속 띄워둬요 (원하는 증류소를 눈으로 찾게) */
+.show-labels .globe-pin-inner::after { opacity: 0.92; }
 /* 가까이 확대하면 핀을 작게 (스페이사이드처럼 빽빽한 곳) */
 .is-close .globe-pin-inner { width: 26px; height: 26px; }
 .is-close .globe-pin-inner svg { width: 14px; height: 14px; }
