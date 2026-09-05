@@ -34,7 +34,15 @@ const nav = [
 /** 모바일 하단 탭에 넣을 5개 */
 const MOBILE_TABS = ["/home", "/quiz", "/chat", "/scan", "/whisky"];
 
-export function SiteHeader({ email, isAdmin = false }: { email: string | null; isAdmin?: boolean }) {
+export function SiteHeader({
+  email,
+  displayName,
+  isAdmin = false,
+}: {
+  email: string | null;
+  displayName?: string | null;
+  isAdmin?: boolean;
+}) {
   const pathname = usePathname();
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
 
@@ -70,10 +78,17 @@ export function SiteHeader({ email, isAdmin = false }: { email: string | null; i
                 <span className="hidden sm:inline">관리자</span>
               </Button>
             )}
-            {email && (
-              <span className="hidden max-w-40 truncate text-xs text-muted-foreground lg:inline">
-                {email}
-              </span>
+            {(displayName || email) && (
+              <Link
+                href="/settings"
+                title="설정"
+                className={cn(
+                  "hidden max-w-32 truncate rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-amber-300 lg:inline-block",
+                  isActive("/settings") && "text-amber-300",
+                )}
+              >
+                {displayName || email}
+              </Link>
             )}
             <form action="/auth/signout" method="post">
               <Button type="submit" variant="outline" size="sm">

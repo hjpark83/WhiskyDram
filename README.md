@@ -17,7 +17,7 @@ FirstDram은 전문 테이스팅 노트를 초보자의 언어로 번역하고, 
 | 병 스캔 | 마트에서 찍은 병 사진 → 라벨 인식 → 내장 사전 매칭 → 쉬운 해설 + 내 취향 적합도 | Claude 비전으로 라벨 식별 |
 | 테이스팅 노트 | "피트는 별로, 과일향이 좋았어요" 한 줄 후기 → 취향 프로필 갱신 → 재추천 | 자유 텍스트 → 취향 벡터 델타 추출 |
 | 증류소 지도 | 지구본을 돌려 나라 → 지역 → 증류소로 좁혀가며 108곳을 탐색 | — |
-| 팝업 스토어 | 브랜드 팝업 일정·내용 미리보기 + 캐치테이블·네이버 예약 링크, 관련 위스키 연결 | — |
+| 팝업 스토어 | 브랜드 팝업 일정·내용 미리보기 + 캐치테이블·네이버 예약 링크, 관련 위스키 연결 | AI가 웹 검색으로 후보를 찾아 초안 작성 (관리자 확인 후 공개) |
 | 용어 사전 | 본문 속 전문 용어 클릭 → 팝업 설명 | — |
 
 ### 설계 포인트
@@ -52,7 +52,7 @@ npm run dev
 | `AI_PROVIDER` | (선택) `anthropic` / `openai` / `gemini` 중 강제 지정 |
 | `ANTHROPIC_API_KEY` · `ANTHROPIC_MODEL` | Claude 키 / 모델 (기본 `claude-opus-5`) |
 | `OPENAI_API_KEY` · `OPENAI_MODEL` | ChatGPT 키 / 모델 (기본 `gpt-5`) |
-| `GEMINI_API_KEY` · `GEMINI_MODEL` | Gemini 키 / 모델 (기본 `gemini-2.5-flash`) |
+| `GEMINI_API_KEY` · `GEMINI_MODEL` | Gemini 키 / 모델 (기본 `gemini-3.5-flash`) |
 
 키가 하나도 없어도 앱은 돌아가요 — 모든 AI 기능에 규칙 기반 폴백이 있어서 데모가 멈추지 않아요.
 `/api/health` 를 열면 어떤 키가 잡혔고 지금 어떤 프로바이더가 쓰이는지 확인할 수 있어요.
@@ -65,13 +65,50 @@ AI 기능은 전부 두 가지 호출로 정리돼 있어요 (`src/lib/ai/provid
 |---|---|---|
 | `generateJson()` | 취향 추천, 후기 분석, 병 스캔 | 스키마가 정해진 JSON 을 받아와요 (zod 로 검증) |
 | `streamTurn()` | AI 소믈리에 채팅 | 도구를 쓰면서 글자를 스트리밍해요 |
+| `researchWeb()` | 팝업 찾기 (`/admin/popups/discover`) | 모델이 직접 웹을 검색하고 출처를 돌려줘요 |
 
 - **Claude**: 네이티브 SDK. `messages.parse()` + `zodOutputFormat` 으로 구조화 출력, 시스템 프롬프트는 프롬프트 캐싱.
 - **ChatGPT**: `openai` SDK. `response_format: json_schema` (strict).
-- **Gemini**: 같은 `openai` SDK 를 OpenAI 호환 엔드포인트(`generativelanguage.googleapis.com/v1beta/openai/`)로 붙여 써요.
+- **Gemini**: 네이티브 REST (`generateContent` / `streamGenerateContent`). 구조화 출력은 `responseSchema`,
+  도구는 `functionDeclarations` 로 옮겨 넣어요 (zod → JSON Schema → Gemini 스키마 변환은 `gemini.ts`).
 
 바꾸는 방법은 키를 넣고 `AI_PROVIDER` 를 지정하는 것뿐이고, 기능 코드는 손대지 않아요.
 스키마 모드를 못 받는 모델이면 JSON 모드로 자동 재시도해요.
+
+웹 검색(`researchWeb`)은 프로바이더의 **검색 그라운딩**을 써요 — Gemini `google_search`(네이티브),
+OpenAI Responses API `web_search`, Claude `web_search` 서버 도구. 캐치테이블·네이버 HTML 을
+직접 긁지 않아요 (약관 문제도 있고, 두 곳 다 봇 차단이 걸린 JS 페이지라 서버에서 긁으면 막혀요).
+
+### Gemini API 키 받기
+
+1. [aistudio.google.com/apikey](https://aistudio.google.com/apikey) 접속 → 구글 계정 로그인
+2. **Create API key** → 기존 Google Cloud 프로젝트를 고르거나 새로 만들기
+3. 만들어진 키를 복사 — 요즘은 `AQ.` 로 시작하는 새 형식으로 나와요 (예전엔 `AIza…`). 둘 다 정상이에요.
+4. 로컬은 `.env.local`, 배포는 Vercel → Settings → Environment Variables 에 넣기
+
+```
+AI_PROVIDER=gemini
+GEMINI_API_KEY=AQ....             # AIza... 형식도 그대로 동작해요
+GEMINI_MODEL=gemini-3.5-flash     # 선택. 기본값이라 안 넣어도 돼요
+```
+
+> Gemini 는 OpenAI 호환 경로(`/v1beta/openai/`)가 아니라 **네이티브 API** 로 붙여요
+> (`src/lib/ai/gemini.ts`). 새 `AQ.` 키가 호환 경로에서 401 로 막힌다는 보고가 많고,
+> 검색 그라운딩(`google_search`)도 호환 경로엔 없어서예요.
+
+무료 등급이 있지만 분당·하루 요청 수 제한이 있어요. 제한에 걸리면 앱은 규칙 기반 폴백으로
+넘어가고, `/api/health` 에서 지금 어떤 프로바이더가 잡혔는지 확인할 수 있어요.
+
+### AI 로 팝업 찾기
+
+`/admin/popups/discover` 에서 브랜드를 적고 누르면 AI 가 웹을 검색해 팝업 후보를 정리해줘요.
+
+- 결과는 **초안**이에요. 고른 항목은 `published: false` 로 저장되고, 관리자가 목록에서
+  공개를 눌러야 사용자에게 보여요.
+- AI 가 기간을 확인하지 못하면 날짜를 지어내지 않고 비워둬요. 관리자가 출처를 보고 채워야
+  저장돼요.
+- 저장된 초안에는 출처 URL 과 "확인할 점"이 함께 남고, 공개된 뒤에도 상세 페이지에 출처가
+  보여요.
 
 ### Supabase 세팅
 
@@ -104,7 +141,8 @@ src/
 │       ├── map/              # 지구본 증류소 지도 (react-globe.gl)
 │       ├── compare/          # 두 병 비교
 │       ├── popup/            # 팝업 스토어 목록 + 상세 [id]
-│       ├── admin/            # 관리자 (팝업 CRUD) — admins 테이블 확인 후 접근
+│       ├── admin/            # 관리자 (팝업 CRUD, AI 검색) — admins 테이블 확인 후 접근
+│       ├── settings/         # 닉네임 수정
 │       ├── glossary/         # 용어 사전
 │       └── whisky/           # 위스키 탐색 목록 + 상세 [id]
 │   ├── share/                # 공개 공유 카드 (URL 파라미터 기반)
@@ -117,7 +155,8 @@ src/
 │   └── quiz.ts               # 진단 질문 + 축 델타
 ├── components/ui/            # shadcn
 ├── lib/
-│   ├── ai/                   # provider.ts (Claude/OpenAI/Gemini 어댑터) + 기능별 프롬프트
+│   ├── ai/                   # provider.ts (어댑터), gemini.ts (네이티브 REST),
+│   │                         # web-research.ts (검색 그라운딩) + 기능별 프롬프트
 │   ├── auth/admin.ts         # 관리자 확인
 │   ├── popup/                # 팝업 상태 계산, 링크 만들기, DB↔시드 로더
 │   ├── supabase/             # browser / server / proxy 클라이언트
@@ -138,6 +177,7 @@ supabase/schema.sql           # DB 스키마 (profiles, tasting_notes, recommend
 - [x] P2 · 지구본 증류소 지도 (`/map`), 용어 사전·팝오버 (`/glossary`), 두 병 비교 (`/compare`), 공유 카드 (`/share`, OG 이미지)
 - [x] P2 · 팝업 스토어 (`/popup`) + 관리자 페이지 (`/admin`), Google 로그인
 - [x] P2 · AI 프로바이더 교체 (Claude / ChatGPT / Gemini)
+- [x] P2 · 닉네임 지정, AI 웹 검색으로 팝업 초안 만들기
 - [ ] P2 · 데모 영상, 발표 자료
 
 ## 데모 시나리오 (3분)

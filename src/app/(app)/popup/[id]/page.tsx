@@ -130,6 +130,16 @@ export default async function PopupDetailPage({ params }: PageProps<"/popup/[id]
       )}
 
       {/* 예약 · 외부 링크 */}
+      {popup.aiGenerated && popup.sources.length > 0 && (
+        <div className="flex gap-2.5 rounded-xl border border-amber-400/25 bg-amber-500/5 p-4 text-sm">
+          <Info className="mt-0.5 size-4 shrink-0 text-amber-300" aria-hidden />
+          <p className="text-amber-50/85">
+            이 정보는 AI가 웹에서 찾아 정리하고 관리자가 확인한 거예요. 방문 전에 아래 출처에서 기간과
+            장소를 한 번 더 확인해주세요.
+          </p>
+        </div>
+      )}
+
       <section className="space-y-3">
         <h2 className="text-xl text-amber-100">예약하고 더 알아보기</h2>
         <p className="text-xs text-muted-foreground">
@@ -160,6 +170,26 @@ export default async function PopupDetailPage({ params }: PageProps<"/popup/[id]
         <p className="flex items-center gap-1 text-xs text-muted-foreground">
           <ExternalLink className="size-3" aria-hidden /> 외부 사이트로 이동해요
         </p>
+        {popup.sources.length > 0 && (
+          <div>
+            <p className="mb-1.5 text-xs uppercase tracking-wider text-muted-foreground">출처</p>
+            <ul className="flex flex-wrap gap-2">
+              {popup.sources.map((url) => (
+                <li key={url}>
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 rounded-full border border-amber-400/20 px-2.5 py-1 text-xs text-muted-foreground hover:border-amber-400/50 hover:text-amber-200"
+                  >
+                    <ExternalLink className="size-3" aria-hidden />
+                    {new URL(url).hostname.replace(/^www\./, "")}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </section>
 
       {/* 관련 위스키 */}

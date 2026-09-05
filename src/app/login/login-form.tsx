@@ -12,16 +12,34 @@ function CredentialsForm({
   action,
   submitLabel,
   next,
+  withNickname = false,
 }: {
   action: (prev: AuthState, formData: FormData) => Promise<AuthState>;
   submitLabel: string;
   next: string;
+  /** 회원가입일 때만 닉네임을 받아요 */
+  withNickname?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(action, null);
 
   return (
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="next" value={next} />
+      {withNickname && (
+        <div className="space-y-2">
+          <Label htmlFor={`${submitLabel}-nickname`}>닉네임</Label>
+          <Input
+            id={`${submitLabel}-nickname`}
+            name="nickname"
+            autoComplete="nickname"
+            placeholder="사이트에서 불릴 이름"
+            required
+            minLength={2}
+            maxLength={12}
+          />
+          <p className="text-xs text-muted-foreground">2~12자. 나중에 설정에서 바꿀 수 있어요.</p>
+        </div>
+      )}
       <div className="space-y-2">
         <Label htmlFor={`${submitLabel}-email`}>이메일</Label>
         <Input
@@ -39,7 +57,7 @@ function CredentialsForm({
           id={`${submitLabel}-password`}
           name="password"
           type="password"
-          autoComplete="current-password"
+          autoComplete={withNickname ? "new-password" : "current-password"}
           placeholder="6자 이상"
           required
           minLength={6}
@@ -95,7 +113,7 @@ export function LoginForm({ next }: { next: string }) {
           <CredentialsForm action={signIn} submitLabel="로그인" next={next} />
         </TabsContent>
         <TabsContent value="signup" className="pt-4">
-          <CredentialsForm action={signUp} submitLabel="회원가입" next={next} />
+          <CredentialsForm action={signUp} submitLabel="회원가입" next={next} withNickname />
         </TabsContent>
       </Tabs>
 

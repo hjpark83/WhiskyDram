@@ -11,6 +11,13 @@ const credentialsSchema = z.object({
   password: z.string().min(6, { error: "비밀번호는 6자 이상이어야 해요." }),
 });
 
+/** 화면에 보일 이름. 사이트 전체에서 이 이름으로 불러요. */
+export const nicknameSchema = z
+  .string()
+  .trim()
+  .min(2, { error: "닉네임은 2자 이상이어야 해요." })
+  .max(12, { error: "닉네임은 12자까지 쓸 수 있어요." });
+
 function siteUrl() {
   return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 }
@@ -48,11 +55,19 @@ export async function signUp(
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message };
   }
+  const nickname = nicknameSchema.safeParse(formData.get("nickname") ?? "");
+  if (!nickname.success) {
+    return { error: nickname.error.issues[0]?.message };
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     ...parsed.data,
-    options: { emailRedirectTo: `${siteUrl()}/auth/callback` },
+    options: {
+      emailRedirectTo: `${siteUrl()}/auth/callback`,
+      // 트리거(handle_new_user)가 이 값을 읽어 profiles.display_name 에 넣어요
+      data: { display_name: nickname.data },
+    },
   });
   if (error) {
     return { error: error.message };
