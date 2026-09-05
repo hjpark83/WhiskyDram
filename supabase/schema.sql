@@ -1,5 +1,6 @@
 -- FirstDram (AI Whisky Sommelier) — Supabase schema
--- Run this in Supabase Dashboard > SQL Editor.
+-- Run this in Supabase Dashboard > SQL Editor. It is idempotent — re-run it
+-- whenever this file changes (policies are dropped and recreated).
 -- Whisky dictionary itself lives in the repo as static data (src/data/whiskies.ts);
 -- only per-user state is stored here.
 
@@ -17,10 +18,13 @@ create table if not exists public.profiles (
 
 alter table public.profiles enable row level security;
 
+drop policy if exists "profiles: owner can read" on public.profiles;
 create policy "profiles: owner can read"
   on public.profiles for select using (auth.uid() = id);
+drop policy if exists "profiles: owner can insert" on public.profiles;
 create policy "profiles: owner can insert"
   on public.profiles for insert with check (auth.uid() = id);
+drop policy if exists "profiles: owner can update" on public.profiles;
 create policy "profiles: owner can update"
   on public.profiles for update using (auth.uid() = id);
 
@@ -61,6 +65,7 @@ create index if not exists tasting_notes_user_idx
 
 alter table public.tasting_notes enable row level security;
 
+drop policy if exists "tasting_notes: owner full access" on public.tasting_notes;
 create policy "tasting_notes: owner full access"
   on public.tasting_notes for all
   using (auth.uid() = user_id)
@@ -83,6 +88,7 @@ create index if not exists recommendations_user_idx
 
 alter table public.recommendations enable row level security;
 
+drop policy if exists "recommendations: owner full access" on public.recommendations;
 create policy "recommendations: owner full access"
   on public.recommendations for all
   using (auth.uid() = user_id)
@@ -103,3 +109,135 @@ drop trigger if exists profiles_set_updated_at on public.profiles;
 create trigger profiles_set_updated_at
   before update on public.profiles
   for each row execute procedure public.set_updated_at();
+
+-- ---------------------------------------------------------------------------
+-- admins: 관리자 계정
+--   · admin_emails 에 적어둔 이메일로 가입하면 자동으로 관리자가 돼요.
+--   · 이미 가입한 계정을 관리자로 올리려면 이 파일 맨 아래 스니펫을 쓰세요.
+-- ---------------------------------------------------------------------------
+create table if not exists public.admin_emails (
+  email text primary key,
+  note text,
+  created_at timestamptz not null default now()
+);
+
+-- RLS 를 켜고 정책을 안 만들어요 → 앱에서는 아무도 못 읽어요.
+-- 아래 security definer 함수/트리거만 이 표를 봐요 (관리자 명단이 새지 않게).
+alter table public.admin_emails enable row level security;
+
+create table if not exists public.admins (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  granted_at timestamptz not null default now()
+);
+
+alter table public.admins enable row level security;
+
+-- 관리자인지 확인하는 헬퍼 (정책 안에서 재귀하지 않도록 security definer)
+create or replace function public.is_admin(uid uuid default auth.uid())
+returns boolean
+language sql
+stable
+security definer set search_path = public
+as $$
+  select exists (select 1 from public.admins a where a.user_id = uid);
+$$;
+
+grant execute on function public.is_admin(uuid) to authenticated, anon;
+
+-- 자기 관리자 여부만 확인 가능. 승격/해제는 SQL Editor(service role)에서만.
+drop policy if exists "admins: read own row" on public.admins;
+create policy "admins: read own row"
+  on public.admins for select using (auth.uid() = user_id);
+
+-- 가입 시 프로필 생성 + 관리자 이메일이면 자동 승격
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  insert into public.profiles (id, display_name)
+  values (new.id, split_part(new.email, '@', 1))
+  on conflict (id) do nothing;
+
+  if exists (
+    select 1 from public.admin_emails e
+    where lower(e.email) = lower(new.email)
+  ) then
+    insert into public.admins (user_id) values (new.id)
+    on conflict (user_id) do nothing;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();
+
+-- ---------------------------------------------------------------------------
+-- popup_stores: 브랜드 팝업 스토어 (관리자가 등록, 모든 사용자가 열람)
+-- 비어 있으면 앱이 src/data/popups.ts 의 예시 시드를 보여줘요.
+-- ---------------------------------------------------------------------------
+create table if not exists public.popup_stores (
+  id text primary key,
+  brand text not null,
+  brand_en text not null default '',
+  title text not null,
+  summary text not null default '',
+  description text not null default '',
+  highlights text[] not null default '{}',
+  venue text not null default '',
+  address text not null default '',
+  city text not null default '',
+  start_date date not null,
+  end_date date not null,
+  hours text not null default '',
+  entry text not null default '',
+  reservation text not null default 'walkin'
+    check (reservation in ('catchtable', 'naver', 'instagram', 'walkin')),
+  links jsonb not null default '[]'::jsonb,   -- [{ kind, label, url }]
+  whisky_ids text[] not null default '{}',    -- src/data/whiskies.ts 의 id
+  tags text[] not null default '{}',
+  accent text not null default '#d9a441',
+  published boolean not null default true,
+  created_by uuid references auth.users (id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (end_date >= start_date)
+);
+
+create index if not exists popup_stores_period_idx on public.popup_stores (end_date desc, start_date desc);
+
+alter table public.popup_stores enable row level security;
+
+drop policy if exists "popup_stores: everyone reads published" on public.popup_stores;
+create policy "popup_stores: everyone reads published"
+  on public.popup_stores for select
+  using (published or public.is_admin());
+
+drop policy if exists "popup_stores: admin writes" on public.popup_stores;
+create policy "popup_stores: admin writes"
+  on public.popup_stores for all
+  using (public.is_admin())
+  with check (public.is_admin());
+
+drop trigger if exists popup_stores_set_updated_at on public.popup_stores;
+create trigger popup_stores_set_updated_at
+  before update on public.popup_stores
+  for each row execute procedure public.set_updated_at();
+
+-- ---------------------------------------------------------------------------
+-- 관리자 지정 (여기만 본인 것으로 바꿔서 실행하세요)
+-- ---------------------------------------------------------------------------
+-- 1) 앞으로 이 이메일로 가입하면 자동으로 관리자가 돼요.
+-- insert into public.admin_emails (email, note)
+-- values ('me@example.com', '사이트 운영자')
+-- on conflict (email) do nothing;
+
+-- 2) 이미 가입한 계정을 지금 바로 관리자로 올릴 때.
+-- insert into public.admins (user_id)
+-- select id from auth.users where lower(email) = lower('me@example.com')
+-- on conflict (user_id) do nothing;

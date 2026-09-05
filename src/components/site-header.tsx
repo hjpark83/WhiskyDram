@@ -11,7 +11,9 @@ import {
   MessageCircle,
   NotebookPen,
   Search,
+  ShieldCheck,
   Sparkles,
+  Store,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -25,13 +27,14 @@ const nav = [
   { href: "/scan", label: "병 스캔", icon: Camera },
   { href: "/journal", label: "테이스팅 노트", icon: NotebookPen },
   { href: "/map", label: "증류소 지도", icon: Globe2 },
+  { href: "/popup", label: "팝업 스토어", icon: Store },
   { href: "/glossary", label: "용어 사전", icon: BookOpen },
 ];
 
 /** 모바일 하단 탭에 넣을 5개 */
 const MOBILE_TABS = ["/home", "/quiz", "/chat", "/scan", "/whisky"];
 
-export function SiteHeader({ email }: { email: string | null }) {
+export function SiteHeader({ email, isAdmin = false }: { email: string | null; isAdmin?: boolean }) {
   const pathname = usePathname();
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
 
@@ -56,6 +59,17 @@ export function SiteHeader({ email }: { email: string | null }) {
             ))}
           </nav>
           <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn("text-amber-300", isActive("/admin") && "bg-amber-500/10")}
+                render={<Link href="/admin" />}
+              >
+                <ShieldCheck className="size-4" aria-hidden />
+                <span className="hidden sm:inline">관리자</span>
+              </Button>
+            )}
             {email && (
               <span className="hidden max-w-40 truncate text-xs text-muted-foreground lg:inline">
                 {email}

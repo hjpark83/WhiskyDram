@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PROTECTED_PREFIXES = ["/home", "/quiz", "/scan", "/journal", "/recommend", "/whisky", "/map", "/chat", "/compare", "/glossary"];
+const PROTECTED_PREFIXES = ["/home", "/quiz", "/scan", "/journal", "/recommend", "/whisky", "/map", "/chat", "/compare", "/glossary", "/popup", "/admin"];
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -41,7 +41,8 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isProtected = PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
+  // "/popup" 이 "/popup-something" 까지 잡지 않도록 경로 경계까지 봐요
+  const isProtected = PROTECTED_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone();

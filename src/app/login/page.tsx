@@ -31,7 +31,9 @@ export default async function LoginPage(props: PageProps<"/login">) {
         <CardContent>
           {error && (
             <p className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-              로그인에 실패했어요. 다시 시도해주세요.
+              {error === "oauth"
+                ? "구글 로그인을 아직 쓸 수 없어요. Supabase 대시보드에서 Google 공급자를 켜주세요."
+                : "로그인에 실패했어요. 다시 시도해주세요."}
             </p>
           )}
           <LoginForm next={next} />
