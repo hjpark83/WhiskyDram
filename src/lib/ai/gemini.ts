@@ -56,7 +56,14 @@ async function callGemini(
     const detail = (await res.text().catch(() => "")).slice(0, 400);
     const kind =
       res.status === 429 ? "rate_limit" : res.status === 401 || res.status === 403 ? "auth" : "other";
-    throw new AiError(`Gemini ${res.status}: ${detail}`, kind, res.status);
+    // 404 는 거의 항상 모델 이름 오타예요 — 무엇을 고쳐야 하는지 바로 알려줘요
+    const hint =
+      res.status === 404
+        ? ` (GEMINI_MODEL="${model}" 이름을 확인해주세요)`
+        : res.status === 401 || res.status === 403
+          ? " (GEMINI_API_KEY 를 확인해주세요)"
+          : "";
+    throw new AiError(`Gemini ${res.status}${hint}: ${detail}`, kind, res.status);
   }
   return res;
 }

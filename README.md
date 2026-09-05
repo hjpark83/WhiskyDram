@@ -52,7 +52,7 @@ npm run dev
 | `AI_PROVIDER` | (선택) `anthropic` / `openai` / `gemini` 중 강제 지정 |
 | `ANTHROPIC_API_KEY` · `ANTHROPIC_MODEL` | Claude 키 / 모델 (기본 `claude-opus-5`) |
 | `OPENAI_API_KEY` · `OPENAI_MODEL` | ChatGPT 키 / 모델 (기본 `gpt-5`) |
-| `GEMINI_API_KEY` · `GEMINI_MODEL` | Gemini 키 / 모델 (기본 `gemini-2.5-flash`) |
+| `GEMINI_API_KEY` · `GEMINI_MODEL` | Gemini 키 / 모델 (기본 `gemini-3.5-flash`) |
 
 키가 하나도 없어도 앱은 돌아가요 — 모든 AI 기능에 규칙 기반 폴백이 있어서 데모가 멈추지 않아요.
 `/api/health` 를 열면 어떤 키가 잡혔고 지금 어떤 프로바이더가 쓰이는지 확인할 수 있어요.
@@ -89,7 +89,7 @@ OpenAI Responses API `web_search`, Claude `web_search` 서버 도구. 캐치테�
 ```
 AI_PROVIDER=gemini
 GEMINI_API_KEY=AQ....             # AIza... 형식도 그대로 동작해요
-GEMINI_MODEL=gemini-2.5-flash     # 선택. 품질을 올리려면 gemini-2.5-pro
+GEMINI_MODEL=gemini-3.5-flash     # 선택. 기본값이라 안 넣어도 돼요
 ```
 
 > Gemini 는 OpenAI 호환 경로(`/v1beta/openai/`)가 아니라 **네이티브 API** 로 붙여요

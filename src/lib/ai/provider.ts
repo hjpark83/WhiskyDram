@@ -48,7 +48,7 @@ function keyFor(id: AiProviderId): string | undefined {
 function modelFor(id: AiProviderId): string {
   if (id === "anthropic") return env("ANTHROPIC_MODEL") ?? "claude-opus-5";
   if (id === "openai") return env("OPENAI_MODEL") ?? "gpt-5";
-  return env("GEMINI_MODEL") ?? "gemini-2.5-flash";
+  return env("GEMINI_MODEL") ?? "gemini-3.5-flash";
 }
 
 const LABELS: Record<AiProviderId, string> = {
