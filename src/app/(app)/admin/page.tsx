@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Database, Plus, Sparkles, Store } from "lucide-react";
+import { Database, Plus, Sparkles, Store, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { WHISKIES } from "@/data/whiskies";
+import { activeProvider } from "@/lib/ai/provider";
 import { popupStatus } from "@/lib/popup/format";
 import { listPopups } from "@/lib/popup/store";
 import { importSeedPopups } from "./actions";
@@ -15,6 +16,7 @@ export default async function AdminDashboardPage() {
   const fromSeed = popups.every((p) => p.source === "seed");
   const ongoing = popups.filter((p) => popupStatus(p) === "ongoing").length;
   const upcoming = popups.filter((p) => popupStatus(p) === "upcoming").length;
+  const aiProvider = activeProvider();
 
   return (
     <div className="space-y-6">
@@ -45,6 +47,23 @@ export default async function AdminDashboardPage() {
               <Sparkles className="size-4" aria-hidden /> AI로 찾기
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-3 p-5">
+          <div className="flex items-center gap-2 text-amber-100">
+            <Stethoscope className="size-4 text-amber-400" aria-hidden />
+            <h2 className="text-lg">AI 점검</h2>
+          </div>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {aiProvider
+              ? `지금은 ${aiProvider.label}(${aiProvider.model})로 돌아요. 키가 있어도 모델 이름이나 응답 형식이 안 맞으면 조용히 규칙 기반 결과로 넘어가니, 배포 후 한 번 눌러 확인해주세요.`
+              : "AI 키가 없어서 추천·채팅·스캔이 모두 규칙 기반 결과로 돌아가요. 환경변수를 넣은 뒤 여기서 확인해주세요."}
+          </p>
+          <Button size="sm" variant="outline" render={<Link href="/admin/ai" />}>
+            <Stethoscope className="size-4" aria-hidden /> AI 점검 열기
+          </Button>
         </CardContent>
       </Card>
 

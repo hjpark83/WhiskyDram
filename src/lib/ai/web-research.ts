@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
-import { geminiKey } from "@/lib/ai/gemini";
+import { geminiBase, geminiKey } from "@/lib/ai/gemini";
 import { activeProvider, AiError, toAiError, type ProviderInfo } from "@/lib/ai/provider";
 
 /**
@@ -56,7 +56,7 @@ async function researchGemini(prompt: string, provider: ProviderInfo): Promise<R
   if (!key) throw new AiError("GEMINI_API_KEY 가 없어요.", "auth");
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(provider.model)}:generateContent`,
+    `${geminiBase()}/models/${encodeURIComponent(provider.model)}:generateContent`,
     {
       method: "POST",
       headers: { "content-type": "application/json", "x-goog-api-key": key },

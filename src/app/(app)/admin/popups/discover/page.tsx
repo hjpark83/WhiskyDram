@@ -5,6 +5,9 @@ import { DiscoverView } from "./discover-view";
 
 export const metadata: Metadata = { title: "AI로 팝업 찾기" };
 
+// 검색 그라운딩 + 초안 추출로 두 번 부르기 때문에 30초 넘게 걸릴 수 있어요.
+export const maxDuration = 60;
+
 export default function DiscoverPopupsPage() {
   const provider = activeProvider();
 

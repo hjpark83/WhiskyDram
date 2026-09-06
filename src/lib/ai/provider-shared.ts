@@ -17,13 +17,17 @@ export interface ProviderInfo {
 export type AiErrorKind = "rate_limit" | "auth" | "refusal" | "other";
 
 export class AiError extends Error {
-  constructor(
-    message: string,
-    readonly kind: AiErrorKind,
-    readonly status?: number,
-  ) {
+  // 생성자 파라미터 프로퍼티(readonly kind: …) 대신 본문에서 대입해요.
+  // 그래야 타입만 벗겨내는 도구(node --experimental-strip-types)로도 돌아가서
+  // 점검 스크립트가 앱 코드를 그대로 불러올 수 있어요.
+  readonly kind: AiErrorKind;
+  readonly status?: number;
+
+  constructor(message: string, kind: AiErrorKind, status?: number) {
     super(message);
     this.name = "AiError";
+    this.kind = kind;
+    this.status = status;
   }
 }
 
