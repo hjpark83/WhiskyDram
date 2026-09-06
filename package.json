@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "mock:gemini": "node scripts/mock-gemini.mjs",
+    "ai:check": "GEMINI_BASE_URL=${GEMINI_BASE_URL:-http://127.0.0.1:8787} GEMINI_API_KEY=${GEMINI_API_KEY:-mock-key} AI_PROVIDER=gemini node --experimental-strip-types --import ./scripts/alias-loader-register.mjs scripts/ai-check.ts",
+    "ai:check:live": "node --experimental-strip-types --env-file-if-exists=.env.local --import ./scripts/alias-loader-register.mjs scripts/ai-check.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.122.0",

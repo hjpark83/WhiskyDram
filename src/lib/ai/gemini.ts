@@ -13,7 +13,13 @@ import type { AiImage, AiToolDef, AiTurn, StreamResult } from "@/lib/ai/provider
  * 그래서 구조화 출력·툴 스트리밍·웹 검색을 모두 여기서 REST 로 처리해요.
  */
 
-const BASE = "https://generativelanguage.googleapis.com/v1beta";
+/**
+ * 기본은 구글 엔드포인트. `GEMINI_BASE_URL` 로 바꿀 수 있어요
+ * (사내 프록시를 태우거나, 개발할 때 가짜 서버로 검증할 때 씁니다).
+ */
+export function geminiBase(): string {
+  return (process.env.GEMINI_BASE_URL?.trim() || "https://generativelanguage.googleapis.com/v1beta").replace(/\/$/, "");
+}
 
 export function geminiKey(): string | undefined {
   const key = process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_API_KEY?.trim();
@@ -45,7 +51,7 @@ async function callGemini(
   const key = geminiKey();
   if (!key) throw new AiError("GEMINI_API_KEY 가 없어요.", "auth");
 
-  const url = `${BASE}/models/${encodeURIComponent(model)}:${method}${sse ? "?alt=sse" : ""}`;
+  const url = `${geminiBase()}/models/${encodeURIComponent(model)}:${method}${sse ? "?alt=sse" : ""}`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json", "x-goog-api-key": key },
@@ -87,6 +93,19 @@ export function toGeminiSchema(node: unknown): Record<string, unknown> {
   const src = asRecord(node);
   if (!src) return { type: "STRING" };
 
+  // zod 는 nullable 객체·배열을 anyOf: [ {…}, {type:"null"} ] 로 내보내요.
+  // Gemini 에는 union 이 없으니 null 이 아닌 가지를 쓰고 nullable 로 표시해요.
+  const union = (src.anyOf ?? src.oneOf) as unknown[] | undefined;
+  if (Array.isArray(union) && union.length > 0) {
+    const branches = union.map(asRecord);
+    const nullable = branches.some((b) => b?.type === "null");
+    const main = branches.find((b) => b && b.type !== "null");
+    const converted = toGeminiSchema(main ?? {});
+    if (nullable) converted.nullable = true;
+    if (typeof src.description === "string") converted.description = src.description;
+    return converted;
+  }
+
   const out: Record<string, unknown> = {};
 
   // type: "string" 또는 ["string", "null"]
@@ -104,7 +123,13 @@ export function toGeminiSchema(node: unknown): Record<string, unknown> {
     out.enum = src.enum.map(String);
     out.type = "STRING";
   }
-  if (src.items) out.items = toGeminiSchema(src.items);
+  if (src.items) {
+    out.items = toGeminiSchema(src.items);
+    // 개수 제약은 Gemini 도 받아요. 빼먹으면 "정확히 3개" 같은 약속이 지켜지지 않아
+    // 응답이 zod 검증에서 떨어지고 폴백으로 새요.
+    if (typeof src.minItems === "number") out.minItems = src.minItems;
+    if (typeof src.maxItems === "number") out.maxItems = src.maxItems;
+  }
 
   const props = asRecord(src.properties);
   if (props) {
