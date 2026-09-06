@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/auth/admin";
 const TABS = [
   { href: "/admin", label: "대시보드" },
   { href: "/admin/popups", label: "팝업 관리" },
+  { href: "/admin/ai", label: "AI 점검" },
 ];
 
 export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
