@@ -173,8 +173,23 @@ async function checkScan(): Promise<Outcome> {
       `${FALLBACK_HINT} 비전(이미지 입력)을 지원하지 않는 모델이면 여기서만 실패해요.`,
     );
   }
+  // 좌표 박스가 오면 화면에 그릴 수 있는 값인지 봐요 (뒤집히거나 범위를 벗어나면 못 그려요)
+  const badBox = result.regions.find((r) => {
+    const [ymin, xmin, ymax, xmax] = r.box;
+    return (
+      [ymin, xmin, ymax, xmax].some((v) => v < 0 || v > 1000) || ymax <= ymin || xmax <= xmin
+    );
+  });
+  if (badBox) {
+    return no(
+      `좌표 박스가 이상해요 (${badBox.box.join(", ")})`,
+      "scanBottle 이 거르지 못한 박스예요. 그대로 그리면 엉뚱한 자리에 상자가 떠요.",
+    );
+  }
   // 1x1 빈 이미지니까 못 알아보는 게 정상이에요. 호출이 됐는지만 봐요.
-  return ok(`확신도 ${result.confidence} · 판정 ${result.whiskyId ?? "unknown"} (빈 이미지라 정상이에요)`);
+  return ok(
+    `확신도 ${result.confidence} · 판정 ${result.whiskyId ?? "unknown"} · 읽은 자리 ${result.regions.length}곳 (빈 이미지라 정상이에요)`,
+  );
 }
 
 async function checkChat(): Promise<Outcome> {

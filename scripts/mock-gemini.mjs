@@ -91,6 +91,8 @@ function sample(node, key = "") {
     case "BOOLEAN":
       return true;
     case "ARRAY": {
+      // 좌표 박스는 그럴듯한 값을 줘야 화면 검사가 의미가 있어요
+      if (/^box$/i.test(key) && node.minItems === 4) return [200, 150, 420, 850];
       // 길이 제약이 있으면 맞춰줘요 (예: picks 는 정확히 3개)
       const n = node.minItems ?? (node.maxItems && node.maxItems < 2 ? node.maxItems : 1);
       return Array.from({ length: Math.max(1, n) }, () => sample(node.items, key));

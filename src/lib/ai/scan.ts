@@ -6,9 +6,20 @@ import { hasProfile, matchPercent } from "@/lib/whisky/recommend";
 import type { TasteProfile } from "@/lib/whisky/types";
 
 /** recommendations.payload (source = 'scan') 에 저장되는 형태 */
+/** 라벨에서 읽은 조각 하나 — 무엇을 어디서 읽었는지 */
+export interface ScanRegion {
+  kind: "brand" | "age" | "edition" | "abv" | "origin" | "other";
+  /** 그 자리에서 읽은 글자 */
+  text: string;
+  /** [ymin, xmin, ymax, xmax], 사진 크기를 0~1000 으로 본 좌표 */
+  box: [number, number, number, number];
+}
+
 export interface ScanPayload {
   kind: "scan";
   readText: string; // 라벨에서 읽은 글자
+  /** 사진 위에 "여기서 이걸 읽었어요" 를 그려주기 위한 조각들 */
+  regions: ScanRegion[];
   guessName: string; // AI 가 추정한 병 이름
   whiskyId: string | null; // 사전 매칭 결과
   confidence: "high" | "medium" | "low";
@@ -37,6 +48,9 @@ const SYSTEM_PROMPT = `당신은 위스키 라벨을 읽고 사전에서 같은 
 1. 사진 속 라벨의 브랜드, 제품명, 숙성 연수, 특별 에디션 표기를 읽어요.
 2. 아래 사전 목록에서 가장 잘 맞는 id 를 골라요. 숙성 연수·에디션까지 맞아야 high, 브랜드만 맞으면 medium, 애매하면 low.
 3. 사전에 없는 병이면 whiskyId 를 "unknown" 으로 두고, 읽은 이름을 guessName 에 적어요.
+3-1. 읽은 글자가 사진의 **어디에** 있었는지 regions 에 적어요. 좌표는 [ymin, xmin, ymax, xmax] 이고
+   사진의 세로·가로를 각각 0~1000 으로 봤을 때의 값이에요. 브랜드명·숙성연수·에디션·도수처럼
+   확실히 보이는 것만 넣고, 위치가 애매하면 넣지 마세요. 없으면 빈 배열로 두세요.
 4. 사용자의 취향 프로필이 있으면 그 병이 지금 취향에 맞는지 짧게 판정해요. 한국어 ~해요체, 전문 용어 없이.
 
 ## 사전 (id | 한글 이름 | 영문 이름 | 별칭)
@@ -56,6 +70,21 @@ export async function scanBottle(input: ScanInput): Promise<ScanPayload> {
 
   const Schema = z.object({
     readText: z.string().describe("라벨에서 읽은 글자 그대로. 못 읽으면 빈 문자열."),
+    // 사진 위에 "여기서 이걸 읽었어요" 를 그려주려고 위치도 함께 받아요.
+    // 못 찾으면 빈 배열로 두면 돼요 — 화면은 박스 없이도 잘 돌아가요.
+    regions: z
+      .array(
+        z.object({
+          kind: z.enum(["brand", "age", "edition", "abv", "origin", "other"]),
+          text: z.string().describe("그 자리에서 읽은 글자."),
+          box: z
+            .array(z.number().int().min(0).max(1000))
+            .length(4)
+            .describe("[ymin, xmin, ymax, xmax] — 사진의 세로·가로를 각각 0~1000 으로 본 좌표."),
+        }),
+      )
+      .max(6)
+      .describe("라벨에서 읽은 조각들의 위치. 확실한 것만, 최대 6개. 없으면 빈 배열."),
     guessName: z.string().describe("추정한 병 이름 (한글 또는 영문)."),
     // 사전 id 를 enum 으로 넘기지 않아요.
     // 사전이 크고 id 가 두 곳(whiskyId, alternatives)에 들어가서, enum 으로 만들면
@@ -106,6 +135,14 @@ export async function scanBottle(input: ScanInput): Promise<ScanPayload> {
     return {
       kind: "scan",
       readText: out.readText,
+      // 모델이 좌표를 뒤집거나 범위를 벗어나게 줄 때가 있어요. 그런 건 버려요 —
+      // 엉뚱한 자리에 박스가 그려지면 안 그리느니만 못해요.
+      regions: out.regions.flatMap((r) => {
+        const [ymin, xmin, ymax, xmax] = r.box;
+        if (ymax - ymin < 8 || xmax - xmin < 8) return [];
+        if ([ymin, xmin, ymax, xmax].some((v) => v < 0 || v > 1000)) return [];
+        return [{ kind: r.kind, text: r.text, box: [ymin, xmin, ymax, xmax] as [number, number, number, number] }];
+      }),
       guessName: out.guessName,
       whiskyId,
       confidence: out.confidence,
@@ -129,6 +166,7 @@ function fallbackScan(): ScanPayload {
   return {
     kind: "scan",
     readText: "",
+    regions: [],
     guessName: "",
     whiskyId: null,
     confidence: "low",
