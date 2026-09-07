@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { WhiskyCard } from "@/components/whisky/whisky-card";
 import { STORE_LABELS_KO } from "@/data/stores";
+import type { Persona } from "@/data/persona";
 import { getWhisky } from "@/data/whiskies";
+import { personaFromRow, PERSONA_COLUMNS } from "@/lib/ai/persona";
 import { judgePrice } from "@/lib/ai/price";
 import { listReports } from "@/lib/price/store";
 import {
@@ -44,10 +46,18 @@ export default async function PriceDetailPage({ params }: PageProps<"/price/[id]
   } = await supabase.auth.getUser();
 
   let profile: TasteProfile | null = null;
+  let persona: Persona | null = null;
   if (user) {
     const { data } = await supabase.from("profiles").select("taste_profile").eq("id", user.id).maybeSingle();
     const stored = (data?.taste_profile as Partial<TasteProfile> | null) ?? null;
     if (hasProfile(stored)) profile = { ...EMPTY_TASTE_PROFILE, ...stored };
+
+    const { data: personaRow } = await supabase
+      .from("profiles")
+      .select(PERSONA_COLUMNS)
+      .eq("id", user.id)
+      .maybeSingle();
+    persona = personaFromRow(personaRow as Record<string, unknown> | null);
   }
 
   const reports = await listReports({ whiskyId: id });
@@ -59,6 +69,7 @@ export default async function PriceDetailPage({ params }: PageProps<"/price/[id]
         whisky,
         summary,
         profile,
+        persona,
         candidates: rankWhiskies(profile ?? EMPTY_TASTE_PROFILE, {
           excludeIds: [whisky.id],
           maxPriceKrw: Math.round(summary.medianPer700 * 1.15),

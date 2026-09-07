@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getWhisky } from "@/data/whiskies";
 import { generateJournalRecommendation, noteWeight, type NoteHistoryItem } from "@/lib/ai/journal";
+import { personaFromRow, PERSONA_COLUMNS } from "@/lib/ai/persona";
 import { createClient } from "@/lib/supabase/server";
 import {
   applyDeltas,
@@ -82,7 +83,14 @@ export async function submitTastingNote(raw: SubmitNoteInput): Promise<SubmitNot
     }
   }
 
+  const { data: personaRow } = await supabase
+    .from("profiles")
+    .select(PERSONA_COLUMNS)
+    .eq("id", user.id)
+    .maybeSingle();
+
   const { payload, profileAfter } = await generateJournalRecommendation({
+    persona: personaFromRow(personaRow as Record<string, unknown> | null),
     whisky,
     rating,
     review,

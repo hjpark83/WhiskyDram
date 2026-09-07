@@ -251,6 +251,19 @@ create trigger popup_stores_set_updated_at
   for each row execute procedure public.set_updated_at();
 
 -- ---------------------------------------------------------------------------
+-- 내 정보 (profiles 에 덧붙이는 칸)
+-- ---------------------------------------------------------------------------
+-- 추천에 쓰는 것과 안 쓰는 것을 나눠뒀어요 (src/data/persona.ts 참고).
+--   drink_scenes / likes_note / avoids_note → 추천 프롬프트에 들어가요.
+--   age_band → 도수·가격 감각 참고용. "이 나이대는 이렇다" 단정은 금지.
+--   gender   → 저장만 하고 추천 계산·프롬프트에는 넣지 않아요.
+alter table public.profiles add column if not exists age_band text;
+alter table public.profiles add column if not exists gender text;
+alter table public.profiles add column if not exists drink_scenes text[] not null default '{}'::text[];
+alter table public.profiles add column if not exists likes_note text;
+alter table public.profiles add column if not exists avoids_note text;
+
+-- ---------------------------------------------------------------------------
 -- 시세 제보 (price_reports)
 -- ---------------------------------------------------------------------------
 -- 왜 제보인가: 한국은 주류 통신판매가 원칙적으로 금지라 마트·매장이 위스키 가격을

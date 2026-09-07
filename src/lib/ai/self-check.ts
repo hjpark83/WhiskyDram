@@ -10,7 +10,9 @@
  * 툴 스트리밍). 그래서 "키가 있다" 만으로는 부족하고 이렇게 다 불러봐야 해요.
  */
 
+import { GENDER_LABELS_KO, type Persona } from "@/data/persona";
 import { WHISKIES } from "@/data/whiskies";
+import { personaText } from "@/lib/ai/persona";
 import { runChat } from "@/lib/ai/chat";
 import { generateJournalRecommendation } from "@/lib/ai/journal";
 import { researchPopups } from "@/lib/ai/popup-research";
@@ -31,7 +33,7 @@ const PROFILE: TasteProfile = { ...EMPTY_TASTE_PROFILE, sweet: 2, fruit: 1, peat
 const TINY_PNG =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
 
-export type CheckId = "quiz" | "journal" | "scan" | "chat" | "price" | "popup";
+export type CheckId = "persona" | "quiz" | "journal" | "scan" | "chat" | "price" | "popup";
 
 export interface CheckMeta {
   id: CheckId;
@@ -41,6 +43,7 @@ export interface CheckMeta {
 }
 
 export const CHECKS: CheckMeta[] = [
+  { id: "persona", name: "개인정보 취급", what: "성별이 프롬프트에 안 들어가는지 (AI 호출 없음)" },
   { id: "quiz", name: "취향 진단 추천", what: "구조화 JSON · 정해진 개수(3병) · 사전에 있는 id" },
   { id: "journal", name: "후기 분석", what: "구조화 JSON · 취향 축 갱신" },
   { id: "scan", name: "병 사진 스캔", what: "이미지 입력(비전) · 구조화 JSON" },
@@ -82,6 +85,42 @@ const FALLBACK_HINT =
   "키는 있는데 호출이 실패해서 규칙 기반 결과로 넘어갔어요. 서버 로그(Vercel → Logs)에 [ai] 로 시작하는 줄을 보면 이유가 나와요.";
 
 // ── 개별 점검 ───────────────────────────────────────────────────────────────
+
+/**
+ * 약속한 대로 성별이 프롬프트에 안 들어가는지 확인해요.
+ *
+ * AI 를 부르지 않아서 공짜고 즉시 끝나요. 화면에서 "성별은 추천에 쓰지
+ * 않아요" 라고 말해놨으니, 그 약속이 코드에서 지켜지는지 기계가 지켜봐야 해요.
+ */
+async function checkPersona(): Promise<Outcome> {
+  const full: Persona = {
+    ageBand: "30s",
+    gender: "female",
+    scenes: ["alone", "meal"],
+    likes: "바닐라 향",
+    avoids: "소독약 냄새",
+  };
+  const text = personaText(full) ?? "";
+  if (!text) return no("내 정보가 프롬프트에 아예 안 들어갔어요", "personaText() 를 확인해주세요.");
+
+  // 성별 값·라벨 어느 쪽도 새면 안 돼요
+  const leaked = ["female", "male", ...Object.values(GENDER_LABELS_KO)].filter((word) =>
+    text.includes(word),
+  );
+  if (leaked.length > 0) {
+    return no(
+      `성별이 프롬프트에 들어갔어요 (${leaked.join(", ")})`,
+      "personaText() 에서 성별을 빼야 해요 — 화면에서 안 쓴다고 약속했어요.",
+    );
+  }
+  if (!text.includes(full.avoids)) {
+    return no("피하고 싶은 것이 프롬프트에 안 들어갔어요", "그건 꼭 지켜야 하는 조건이에요.");
+  }
+  if (!text.includes("단정하지 마세요")) {
+    return no("나이대 단정 금지 문구가 빠졌어요", "나이대만 넣고 경고를 빼면 고정관념이 생겨요.");
+  }
+  return ok(`상황·좋아함·피함은 들어가고 성별은 빠졌어요 (${text.split("\n").length - 1}줄)`);
+}
 
 async function checkQuiz(): Promise<Outcome> {
   const payload = await generateQuizRecommendation({
@@ -206,6 +245,7 @@ async function checkPopup(): Promise<Outcome> {
 }
 
 const RUNNERS: Record<CheckId, () => Promise<Outcome>> = {
+  persona: checkPersona,
   quiz: checkQuiz,
   journal: checkJournal,
   scan: checkScan,

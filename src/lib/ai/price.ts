@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { activeProvider, generateJson, toAiError } from "@/lib/ai/provider";
+import type { Persona } from "@/data/persona";
+import { personaText } from "@/lib/ai/persona";
 import { profileText, whiskyCard } from "@/lib/ai/recommend";
 import { formatKrw, STANCE_LABELS_KO, stanceFor, type PriceStance } from "@/lib/price/stats";
 import type { PriceSummary } from "@/lib/price/types";
@@ -53,6 +55,7 @@ export async function judgePrice(input: {
   summary: PriceSummary;
   profile: TasteProfile | null;
   candidates: ScoredWhisky[];
+  persona?: Persona | null;
 }): Promise<PriceVerdict> {
   const provider = activeProvider();
   const fallback = fallbackVerdict(input);
@@ -74,7 +77,9 @@ export async function judgePrice(input: {
       .describe("비슷한 예산에서 취향에 더 맞을 병. 마땅한 게 없으면 빈 배열."),
   });
 
+  const persona = personaText(input.persona);
   const userText = [
+    ...(persona ? [persona] : []),
     `## 보고 있는 병\n${whiskyCard(input.whisky, input.profile ? matchPercent(input.profile, input.whisky) : null)}`,
     `## 제보된 시세\n${summaryText(input.summary)}`,
     input.profile ? `## 사용자 취향\n${profileText(input.profile)}` : "## 사용자 취향\n(아직 취향 진단을 안 했어요)",

@@ -19,7 +19,7 @@ export interface QuizOption {
 
 export interface QuizQuestion {
   id: string;
-  kind: "taste" | "budget" | "experience";
+  kind: "taste" | "budget" | "experience" | "scene";
   question: string;
   hint?: string;
   options: QuizOption[];
@@ -179,6 +179,64 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
     ],
   },
   {
+    id: "nuts",
+    kind: "taste",
+    question: "견과류는 어떠세요?",
+    hint: "오크통에서 오래 숙성된 위스키는 견과·나무 향이 나요.",
+    options: [
+      { id: "love", emoji: "🥜", label: "아몬드·호두 자주 먹어요", delta: { oak: 2, body: 1 } },
+      { id: "ok", emoji: "🌰", label: "있으면 먹는 정도", delta: { oak: 1 } },
+      { id: "no", emoji: "🙅", label: "잘 안 먹어요", delta: { oak: -1, fruit: 1 } },
+    ],
+  },
+  {
+    id: "ginger",
+    kind: "taste",
+    question: "수정과나 진저에일처럼 생강·계피 맛은?",
+    hint: "위스키에서 '스파이시'라고 부르는 느낌이에요. 맵다기보다 알싸해요.",
+    options: [
+      { id: "love", emoji: "🫚", label: "알싸한 그 맛이 좋아요", delta: { spice: 2 } },
+      { id: "ok", emoji: "🥤", label: "가끔 마셔요", delta: { spice: 1 } },
+      { id: "no", emoji: "😖", label: "그 향은 부담스러워요", delta: { spice: -2, sweet: 1 } },
+    ],
+  },
+  {
+    id: "place",
+    kind: "taste",
+    question: "여행 간다면 어디로 가고 싶으세요?",
+    hint: "바닷가 근처 증류소는 짭짤하고 연기 나는 위스키를 만들어요.",
+    options: [
+      { id: "sea", emoji: "🏖️", label: "파도 소리 들리는 바닷가", delta: { peat: 1, spice: 1, body: 1 } },
+      { id: "forest", emoji: "🌲", label: "조용한 숲속", delta: { floral: 2, oak: 1 } },
+      { id: "orchard", emoji: "🍎", label: "과수원·시골 마을", delta: { fruit: 2, sweet: 1 } },
+      { id: "city", emoji: "🏙️", label: "도시 야경", delta: { sweet: 1, body: -1 } },
+    ],
+  },
+  {
+    id: "drink_style",
+    kind: "taste",
+    question: "위스키를 마신다면 어떻게 마실 것 같으세요?",
+    hint: "몰라도 괜찮아요. 아래에서 끌리는 걸 고르시면 돼요.",
+    options: [
+      { id: "neat", emoji: "🥃", label: "잔에 그대로, 향을 천천히", delta: { body: 2, oak: 1 } },
+      { id: "rocks", emoji: "🧊", label: "얼음 넣어서 시원하게", delta: { body: 1 } },
+      { id: "highball", emoji: "🥤", label: "탄산에 섞어 하이볼로", delta: { body: -2, fruit: 1, sweet: 1 } },
+      { id: "unsure", emoji: "🤔", label: "아직 잘 모르겠어요" },
+    ],
+  },
+  {
+    id: "scene",
+    kind: "scene",
+    question: "주로 어떤 자리에서 마시게 될 것 같으세요?",
+    hint: "자리에 따라 어울리는 병이 달라요.",
+    options: [
+      { id: "alone", emoji: "🛋️", label: "혼자 집에서 천천히" },
+      { id: "friends", emoji: "🍻", label: "친구들과 왁자지껄" },
+      { id: "meal", emoji: "🍽️", label: "밥이나 안주와 함께" },
+      { id: "gift", emoji: "🎁", label: "선물할 병을 찾아요" },
+    ],
+  },
+  {
     id: "experience",
     kind: "experience",
     question: "술은 평소 얼마나 드세요?",
@@ -237,6 +295,14 @@ export const EXPERIENCE_MAX_DIFFICULTY: Record<string, 1 | 2 | 3 | 4 | 5> = {
   beer_wine: 2,
   soju_highball: 3,
   whisky_some: 4,
+};
+
+/** 퀴즈의 "어떤 자리" 답 → 내 정보의 마시는 상황(DrinkScene) */
+export const SCENE_FROM_ANSWER: Record<string, string> = {
+  alone: "alone",
+  friends: "friends",
+  meal: "meal",
+  gift: "gift",
 };
 
 export type QuizAnswers = Record<string, string>; // questionId -> optionId
