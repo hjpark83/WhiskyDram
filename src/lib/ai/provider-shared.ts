@@ -66,6 +66,12 @@ export interface AiToolCall {
   id: string;
   name: string;
   input: unknown;
+  /**
+   * 프로바이더가 이 호출에 붙여준 불투명 토큰. 다음 요청에 **그대로 돌려줘야** 해요.
+   * Gemini 3.x 는 functionCall 파트의 `thoughtSignature` 를 되돌려받지 못하면
+   * 400 으로 거절해요. Claude·OpenAI 는 이런 게 없어서 비어 있어요.
+   */
+  signature?: string;
 }
 
 export interface AiToolResult {

@@ -31,11 +31,23 @@ interface GeminiPart {
   inlineData?: { mimeType: string; data: string };
   functionCall?: { name: string; args?: unknown };
   functionResponse?: { name: string; response: Record<string, unknown> };
+  /**
+   * Gemini 3.x 가 functionCall 파트에 붙여주는 불투명 토큰.
+   * 대화를 이어갈 때 **같은 파트에 그대로 다시 실어 보내야** 해요.
+   * 빠지면 `Function call is missing a thought_signature` 400 이 나요.
+   */
+  thoughtSignature?: string;
 }
 
 interface GeminiContent {
   role: "user" | "model";
   parts: GeminiPart[];
+}
+
+/** 429 응답의 RetryInfo("3s") 를 밀리초로. 없으면 null. */
+function retryDelayMs(raw: string): number | null {
+  const match = /"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/.exec(raw);
+  return match ? Math.ceil(Number(match[1]) * 1000) : null;
 }
 
 export function asRecord(value: unknown): Record<string, unknown> | null {
@@ -52,11 +64,25 @@ async function callGemini(
   if (!key) throw new AiError("GEMINI_API_KEY 가 없어요.", "auth");
 
   const url = `${geminiBase()}/models/${encodeURIComponent(model)}:${method}${sse ? "?alt=sse" : ""}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-goog-api-key": key },
-    body: JSON.stringify(body),
-  });
+  const payload = JSON.stringify(body);
+  const send = () =>
+    fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-goog-api-key": key },
+      body: payload,
+    });
+
+  let res = await send();
+
+  // 무료 등급은 분당 요청 수가 빡빡해서, 화면을 두 번 누르기만 해도 429 가 나요.
+  // 구글이 알려주는 대기 시간만큼(최대 8초) 한 번만 다시 시도해요.
+  // 하루 한도를 넘긴 경우라면 다시 시도해도 429 라서, 여기서 더 붙잡지 않아요.
+  if (res.status === 429) {
+    const body429 = await res.clone().text().catch(() => "");
+    const wait = Math.min(8000, retryDelayMs(body429) ?? 3000);
+    await new Promise((r) => setTimeout(r, wait));
+    res = await send();
+  }
 
   if (!res.ok) {
     const detail = (await res.text().catch(() => "")).slice(0, 400);
@@ -68,7 +94,9 @@ async function callGemini(
         ? ` (GEMINI_MODEL="${model}" 이름을 확인해주세요)`
         : res.status === 401 || res.status === 403
           ? " (GEMINI_API_KEY 를 확인해주세요)"
-          : "";
+          : res.status === 429
+            ? " (무료 등급은 분당 요청 수가 적어요 — 30초쯤 뒤에 다시 해주세요)"
+            : "";
     throw new AiError(`Gemini ${res.status}${hint}: ${detail}`, kind, res.status);
   }
   return res;
@@ -210,7 +238,11 @@ function toGeminiContents(turns: AiTurn[]): GeminiContent[] {
       const parts: GeminiPart[] = [];
       if (turn.text) parts.push({ text: turn.text });
       for (const call of turn.toolCalls) {
-        parts.push({ functionCall: { name: call.name, args: (call.input as object) ?? {} } });
+        parts.push({
+          functionCall: { name: call.name, args: (call.input as object) ?? {} },
+          // 받은 서명을 그대로 되돌려줘요 (Gemini 3.x 필수)
+          ...(call.signature ? { thoughtSignature: call.signature } : {}),
+        });
       }
       if (parts.length) out.push({ role: "model", parts });
     } else {
@@ -286,6 +318,8 @@ export async function geminiStreamTurn(req: {
           id: `${call.name}-${toolCalls.length}`,
           name: call.name,
           input: call.args ?? {},
+          // 같은 파트에 실려온 서명을 챙겨둬요 — 다음 요청에 되돌려줘야 해요
+          ...(typeof p?.thoughtSignature === "string" ? { signature: p.thoughtSignature } : {}),
         });
       }
     }
