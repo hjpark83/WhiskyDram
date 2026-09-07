@@ -8,6 +8,7 @@ import { WHISKIES } from "@/data/whiskies";
 import {
   EMPTY_TASTE_PROFILE,
   TASTE_AXES,
+  type TasteAxis,
   type TasteProfile,
   type Whisky,
 } from "@/lib/whisky/types";
@@ -27,6 +28,24 @@ export function clampProfile(p: TasteProfile): TasteProfile {
 }
 
 /** 진단 답변 → 취향 프로필 (-2..+2) */
+/**
+ * 축마다 "최대로 나올 수 있는 합" — 질문지를 늘려도 자동으로 다시 계산돼요.
+ *
+ * 예전엔 합을 2로 나눴는데, 질문이 늘면 합이 커져서 대부분의 축이 ±2 에 박혀요
+ * (전부 "아주 좋아함" 이 되면 취향 구분이 사라져요). 그래서 고정 숫자 대신
+ * 각 축이 이론상 도달할 수 있는 최댓값으로 나눠 -2..+2 로 폅니다.
+ */
+const AXIS_SCALE: Record<TasteAxis, number> = (() => {
+  const scale = Object.fromEntries(TASTE_AXES.map((a) => [a, 0])) as Record<TasteAxis, number>;
+  for (const q of QUIZ_QUESTIONS) {
+    for (const axis of TASTE_AXES) {
+      const strongest = Math.max(0, ...q.options.map((o) => Math.abs(o.delta?.[axis] ?? 0)));
+      scale[axis] += strongest;
+    }
+  }
+  return scale;
+})();
+
 export function profileFromAnswers(answers: QuizAnswers): TasteProfile {
   const raw: TasteProfile = { ...EMPTY_TASTE_PROFILE };
   for (const q of QUIZ_QUESTIONS) {
@@ -37,9 +56,10 @@ export function profileFromAnswers(answers: QuizAnswers): TasteProfile {
       raw[axis as keyof TasteProfile] += d ?? 0;
     }
   }
-  // 여러 질문이 같은 축을 건드리니 합이 ±4까지 갈 수 있어요. 절반으로 눌러 -2..+2로.
+  // 축별 최댓값으로 나눠 -2..+2 로 폅니다 (질문 수와 무관하게 같은 눈금)
   for (const axis of TASTE_AXES) {
-    raw[axis] = Math.round(raw[axis] / 2);
+    const max = AXIS_SCALE[axis];
+    raw[axis] = max > 0 ? Math.round((raw[axis] / max) * 2) : 0;
   }
   return clampProfile(raw);
 }

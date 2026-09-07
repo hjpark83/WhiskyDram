@@ -1,5 +1,45 @@
 import { NextResponse } from "next/server";
 import { activeProvider, configuredProviders } from "@/lib/ai/provider";
+import { createClient, hasSupabaseConfig } from "@/lib/supabase/server";
+
+/**
+ * 지금 이 요청을 보낸 **본인** 정보. 남의 정보는 절대 안 나와요 —
+ * 요청에 실려온 쿠키로 조회하니까 각자 자기 것만 봐요.
+ *
+ * "관리자 권한이 왜 안 붙지" 를 추측으로 찾지 않으려고 넣었어요.
+ * admins 표에 행이 있어도 **다른 계정으로 로그인**해 있으면 소용이 없는데,
+ * 화면만 봐서는 그걸 구분할 수가 없었어요.
+ */
+async function whoami() {
+  if (!hasSupabaseConfig()) return { loggedIn: false, reason: "Supabase 설정이 없어요" };
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { loggedIn: false, reason: "로그인하지 않았어요" };
+
+    const { data, error } = await supabase
+      .from("admins")
+      .select("user_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    return {
+      loggedIn: true,
+      userId: user.id,
+      email: user.email ?? null,
+      provider: user.app_metadata?.provider ?? null,
+      isAdmin: Boolean(data),
+      adminLookupError: error ? `${error.code ?? "?"}: ${error.message}` : null,
+      hint: data
+        ? null
+        : "이 user id 가 public.admins 에 있어야 관리자예요. supabase/check-admin.sql 로 확인해보세요.",
+    };
+  } catch (error) {
+    return { loggedIn: false, reason: error instanceof Error ? error.message : String(error) };
+  }
+}
 
 /**
  * 배포 진단용. 어떤 환경변수가 **있는지만** 알려주고 값은 절대 안 보여줘요.
@@ -16,6 +56,7 @@ export async function GET() {
 
   return NextResponse.json({
     ok: true,
+    you: await whoami(),
     deployment: {
       // 지금 이 화면이 어느 커밋인지 — 최신 main 과 다르면 옛 배포를 보고 있는 거예요
       commit: sha ? sha.slice(0, 7) : null,

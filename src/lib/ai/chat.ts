@@ -7,6 +7,8 @@ import {
   type AiToolResult,
   type AiTurn,
 } from "@/lib/ai/provider";
+import type { Persona } from "@/data/persona";
+import { personaText } from "@/lib/ai/persona";
 import { profileText, whiskyCard } from "@/lib/ai/recommend";
 import { getWhisky, WHISKIES } from "@/data/whiskies";
 import {
@@ -57,6 +59,8 @@ export interface ChatTurn {
 export interface ChatContext {
   profile: TasteProfile | null;
   recentNotes: { whiskyNameKo: string; rating: number; review: string }[];
+  /** 내 정보 (선택). 성별은 personaText 가 빼요. */
+  persona?: Persona | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -239,6 +243,8 @@ const BASE_PROMPT = `당신은 FirstDram 의 AI 소믈리에예요. 위스키를
 
 function buildSystemPrompt(ctx: ChatContext): string {
   const parts = [BASE_PROMPT, ""];
+  const persona = personaText(ctx.persona);
+  if (persona) parts.push(persona, "");
   if (ctx.profile && hasProfile(ctx.profile)) {
     parts.push("## 사용자 취향 프로필", profileText(ctx.profile), "");
   } else {

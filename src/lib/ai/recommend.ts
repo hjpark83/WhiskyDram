@@ -1,4 +1,6 @@
 import { z } from "zod";
+import type { Persona } from "@/data/persona";
+import { personaText } from "@/lib/ai/persona";
 import { activeProvider, generateJson, toAiError } from "@/lib/ai/provider";
 import { AXIS_LABELS_KO, TASTE_AXES, type TasteProfile, type Whisky } from "@/lib/whisky/types";
 import { describeProfile, type ScoredWhisky } from "@/lib/whisky/recommend";
@@ -102,6 +104,8 @@ export interface GenerateInput {
   profile: TasteProfile;
   answers: QuizAnswers;
   candidates: ScoredWhisky[];
+  /** 내 정보 (선택). 성별은 여기서도 프롬프트에 안 들어가요 — personaText 가 걸러요. */
+  persona?: Persona | null;
 }
 
 export async function generateQuizRecommendation(
@@ -142,7 +146,9 @@ export async function generateQuizRecommendation(
       .describe("이 3병 중 하나를 마신 뒤 어떤 후기를 남기면 좋을지, 다음에 뭘 시도해볼지 한두 문장."),
   });
 
+  const persona = personaText(input.persona);
   const userMessage = [
+    ...(persona ? [persona, ""] : []),
     "## 사용자의 진단 답변",
     answersText(input.answers),
     "",

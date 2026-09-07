@@ -5,6 +5,7 @@ import { useRef, useState, useTransition } from "react";
 import { AlertTriangle, Camera, GlassWater, ImagePlus, NotebookPen, RotateCcw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { BottlingLoader } from "@/components/whisky/bottling-loader";
+import { ScanOverlay, scanRegionLabel } from "@/components/whisky/scan-overlay";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -96,11 +97,17 @@ export function ScanForm({ personalized }: { personalized: boolean }) {
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="flex aspect-[3/4] w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border-2 border-dashed bg-muted/30 text-muted-foreground transition-colors hover:border-amber-400/60"
+          className="flex min-h-[240px] w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border-2 border-dashed bg-muted/30 text-muted-foreground transition-colors hover:border-amber-400/60 data-[has-photo=true]:border-solid data-[has-photo=true]:border-amber-400/25 data-[has-photo=true]:p-0"
+          data-has-photo={preview ? "true" : "false"}
         >
           {preview ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={preview} alt="선택한 병 사진" className="h-full w-full object-cover" />
+            // 좌표 박스를 정확히 겹치려면 사진이 잘리면 안 돼요 (object-cover 금지).
+            // 그래서 미리보기부터 오버레이 컴포넌트로 보여줘요.
+            <ScanOverlay
+              src={preview}
+              regions={revealed?.ok ? revealed.result.regions : []}
+              scanning={busy}
+            />
           ) : (
             <>
               <Camera className="size-10" aria-hidden />
@@ -229,6 +236,27 @@ export function ScanForm({ personalized }: { personalized: boolean }) {
                   마셨다면 후기 남기기
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {!busy && revealed?.ok && revealed.result.regions.length > 0 && (
+          <Card>
+            <CardContent className="space-y-2 p-5">
+              <p className="text-sm font-semibold text-amber-100">이렇게 읽었어요</p>
+              <ul className="space-y-1 text-sm">
+                {revealed.result.regions.map((r, i) => (
+                  <li key={`${r.kind}-${i}`} className="flex gap-2">
+                    <span className="shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 text-[11px] text-amber-200">
+                      {scanRegionLabel(r.kind)}
+                    </span>
+                    <span className="min-w-0 break-words text-amber-50/90">{r.text}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-muted-foreground">
+                사진 위의 노란 상자가 각각 어디서 읽은 글자인지 보여줘요.
+              </p>
             </CardContent>
           </Card>
         )}

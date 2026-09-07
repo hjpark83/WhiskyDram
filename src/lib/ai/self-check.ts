@@ -10,14 +10,19 @@
  * 툴 스트리밍). 그래서 "키가 있다" 만으로는 부족하고 이렇게 다 불러봐야 해요.
  */
 
+import { GENDER_LABELS_KO, type Persona } from "@/data/persona";
 import { WHISKIES } from "@/data/whiskies";
+import { personaText } from "@/lib/ai/persona";
 import { runChat } from "@/lib/ai/chat";
 import { generateJournalRecommendation } from "@/lib/ai/journal";
 import { researchPopups } from "@/lib/ai/popup-research";
+import { judgePrice } from "@/lib/ai/price";
 import { activeProvider, type ProviderInfo } from "@/lib/ai/provider";
 import { AiError } from "@/lib/ai/provider-shared";
 import { generateQuizRecommendation } from "@/lib/ai/recommend";
 import { scanBottle } from "@/lib/ai/scan";
+import { per700, summarize } from "@/lib/price/stats";
+import type { PriceReport } from "@/lib/price/types";
 import { rankWhiskies } from "@/lib/whisky/recommend";
 import { EMPTY_TASTE_PROFILE, type TasteProfile } from "@/lib/whisky/types";
 
@@ -28,7 +33,7 @@ const PROFILE: TasteProfile = { ...EMPTY_TASTE_PROFILE, sweet: 2, fruit: 1, peat
 const TINY_PNG =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
 
-export type CheckId = "quiz" | "journal" | "scan" | "chat" | "popup";
+export type CheckId = "persona" | "quiz" | "journal" | "scan" | "chat" | "price" | "popup";
 
 export interface CheckMeta {
   id: CheckId;
@@ -38,10 +43,12 @@ export interface CheckMeta {
 }
 
 export const CHECKS: CheckMeta[] = [
+  { id: "persona", name: "개인정보 취급", what: "성별이 프롬프트에 안 들어가는지 (AI 호출 없음)" },
   { id: "quiz", name: "취향 진단 추천", what: "구조화 JSON · 정해진 개수(3병) · 사전에 있는 id" },
   { id: "journal", name: "후기 분석", what: "구조화 JSON · 취향 축 갱신" },
   { id: "scan", name: "병 사진 스캔", what: "이미지 입력(비전) · 구조화 JSON" },
   { id: "chat", name: "소믈리에 채팅", what: "스트리밍(SSE) · 도구 호출 루프" },
+  { id: "price", name: "시세 판정", what: "구조화 JSON · 제보 숫자를 읽고 판정" },
   { id: "popup", name: "팝업 웹 검색", what: "검색 그라운딩 + 초안 추출 (2번 호출, 조금 느려요)" },
 ];
 
@@ -78,6 +85,42 @@ const FALLBACK_HINT =
   "키는 있는데 호출이 실패해서 규칙 기반 결과로 넘어갔어요. 서버 로그(Vercel → Logs)에 [ai] 로 시작하는 줄을 보면 이유가 나와요.";
 
 // ── 개별 점검 ───────────────────────────────────────────────────────────────
+
+/**
+ * 약속한 대로 성별이 프롬프트에 안 들어가는지 확인해요.
+ *
+ * AI 를 부르지 않아서 공짜고 즉시 끝나요. 화면에서 "성별은 추천에 쓰지
+ * 않아요" 라고 말해놨으니, 그 약속이 코드에서 지켜지는지 기계가 지켜봐야 해요.
+ */
+async function checkPersona(): Promise<Outcome> {
+  const full: Persona = {
+    ageBand: "30s",
+    gender: "female",
+    scenes: ["alone", "meal"],
+    likes: "바닐라 향",
+    avoids: "소독약 냄새",
+  };
+  const text = personaText(full) ?? "";
+  if (!text) return no("내 정보가 프롬프트에 아예 안 들어갔어요", "personaText() 를 확인해주세요.");
+
+  // 성별 값·라벨 어느 쪽도 새면 안 돼요
+  const leaked = ["female", "male", ...Object.values(GENDER_LABELS_KO)].filter((word) =>
+    text.includes(word),
+  );
+  if (leaked.length > 0) {
+    return no(
+      `성별이 프롬프트에 들어갔어요 (${leaked.join(", ")})`,
+      "personaText() 에서 성별을 빼야 해요 — 화면에서 안 쓴다고 약속했어요.",
+    );
+  }
+  if (!text.includes(full.avoids)) {
+    return no("피하고 싶은 것이 프롬프트에 안 들어갔어요", "그건 꼭 지켜야 하는 조건이에요.");
+  }
+  if (!text.includes("단정하지 마세요")) {
+    return no("나이대 단정 금지 문구가 빠졌어요", "나이대만 넣고 경고를 빼면 고정관념이 생겨요.");
+  }
+  return ok(`상황·좋아함·피함은 들어가고 성별은 빠졌어요 (${text.split("\n").length - 1}줄)`);
+}
 
 async function checkQuiz(): Promise<Outcome> {
   const payload = await generateQuizRecommendation({
@@ -130,8 +173,23 @@ async function checkScan(): Promise<Outcome> {
       `${FALLBACK_HINT} 비전(이미지 입력)을 지원하지 않는 모델이면 여기서만 실패해요.`,
     );
   }
+  // 좌표 박스가 오면 화면에 그릴 수 있는 값인지 봐요 (뒤집히거나 범위를 벗어나면 못 그려요)
+  const badBox = result.regions.find((r) => {
+    const [ymin, xmin, ymax, xmax] = r.box;
+    return (
+      [ymin, xmin, ymax, xmax].some((v) => v < 0 || v > 1000) || ymax <= ymin || xmax <= xmin
+    );
+  });
+  if (badBox) {
+    return no(
+      `좌표 박스가 이상해요 (${badBox.box.join(", ")})`,
+      "scanBottle 이 거르지 못한 박스예요. 그대로 그리면 엉뚱한 자리에 상자가 떠요.",
+    );
+  }
   // 1x1 빈 이미지니까 못 알아보는 게 정상이에요. 호출이 됐는지만 봐요.
-  return ok(`확신도 ${result.confidence} · 판정 ${result.whiskyId ?? "unknown"} (빈 이미지라 정상이에요)`);
+  return ok(
+    `확신도 ${result.confidence} · 판정 ${result.whiskyId ?? "unknown"} · 읽은 자리 ${result.regions.length}곳 (빈 이미지라 정상이에요)`,
+  );
 }
 
 async function checkChat(): Promise<Outcome> {
@@ -160,6 +218,36 @@ async function checkChat(): Promise<Outcome> {
   return ok(`도구 ${tools}회 · ${text.length}자 · "${text.slice(0, 30)}…"`);
 }
 
+async function checkPrice(): Promise<Outcome> {
+  const whisky = WHISKIES.find((w) => w.id === "glenfiddich-12") ?? WHISKIES[0];
+  // 점검용 가짜 제보 3건 — DB 를 건드리지 않아요
+  const seen = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
+  const reports: PriceReport[] = [
+    { id: "1", userId: "u", whiskyId: whisky.id, store: "traders", storeNote: "", priceKrw: whisky.priceKrw[0], volumeMl: 700, seenOn: seen, note: "" },
+    { id: "2", userId: "u", whiskyId: whisky.id, store: "costco", storeNote: "", priceKrw: Math.round(whisky.priceKrw[0] * 1.3), volumeMl: 1000, seenOn: seen, note: "" },
+    { id: "3", userId: "u", whiskyId: whisky.id, store: "emart", storeNote: "", priceKrw: whisky.priceKrw[1], volumeMl: 700, seenOn: seen, note: "" },
+  ];
+  const summary = summarize(whisky.id, reports);
+  if (!summary) return no("시세 계산이 비었어요", "summarize() 가 제보를 못 읽었어요.");
+  // 1L 병이 700ml 로 환산되는지도 같이 봐요 (환산이 틀리면 시세가 다 어긋나요)
+  if (per700(reports[1]) >= reports[1].priceKrw) {
+    return no("1L 제보의 700ml 환산이 틀렸어요", "per700() 을 확인해주세요.");
+  }
+
+  const result = await judgePrice({
+    whisky,
+    summary,
+    profile: PROFILE,
+    candidates: rankWhiskies(PROFILE, { excludeIds: [whisky.id] }, 6),
+  });
+  if (result.generatedBy !== "ai") return no("AI 응답이 아니라 폴백이에요", FALLBACK_HINT);
+  const unknown = result.alternatives.find((a) => !WHISKIES.some((w) => w.id === a.whiskyId));
+  if (unknown) return no(`사전에 없는 id 가 왔어요 (${unknown.whiskyId})`, "대안 후보를 코드에서 걸러야 해요.");
+  return ok(`${STANCE_LABELS[result.stance]} · "${result.headline}" · 대안 ${result.alternatives.length}개`);
+}
+
+const STANCE_LABELS: Record<string, string> = { good: "싸다", fair: "보통", high: "비싸다" };
+
 async function checkPopup(): Promise<Outcome> {
   const report = await researchPopups({ brands: ["발베니"], region: "서울" });
   if (report.drafts.length === 0) {
@@ -172,10 +260,12 @@ async function checkPopup(): Promise<Outcome> {
 }
 
 const RUNNERS: Record<CheckId, () => Promise<Outcome>> = {
+  persona: checkPersona,
   quiz: checkQuiz,
   journal: checkJournal,
   scan: checkScan,
   chat: checkChat,
+  price: checkPrice,
   popup: checkPopup,
 };
 

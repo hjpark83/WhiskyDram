@@ -251,6 +251,72 @@ create trigger popup_stores_set_updated_at
   for each row execute procedure public.set_updated_at();
 
 -- ---------------------------------------------------------------------------
+-- 내 정보 (profiles 에 덧붙이는 칸)
+-- ---------------------------------------------------------------------------
+-- 추천에 쓰는 것과 안 쓰는 것을 나눠뒀어요 (src/data/persona.ts 참고).
+--   drink_scenes / likes_note / avoids_note → 추천 프롬프트에 들어가요.
+--   age_band → 도수·가격 감각 참고용. "이 나이대는 이렇다" 단정은 금지.
+--   gender   → 저장만 하고 추천 계산·프롬프트에는 넣지 않아요.
+alter table public.profiles add column if not exists age_band text;
+alter table public.profiles add column if not exists gender text;
+alter table public.profiles add column if not exists drink_scenes text[] not null default '{}'::text[];
+alter table public.profiles add column if not exists likes_note text;
+alter table public.profiles add column if not exists avoids_note text;
+
+-- ---------------------------------------------------------------------------
+-- 시세 제보 (price_reports)
+-- ---------------------------------------------------------------------------
+-- 왜 제보인가: 한국은 주류 통신판매가 원칙적으로 금지라 마트·매장이 위스키 가격을
+-- 온라인에 올리지 않아요. 긁어올 원본이 아예 없어서, 애호가들은 서로 "어디서 얼마"
+-- 를 알려주며 시세를 파악해요. 그 방식을 그대로 옮긴 표예요.
+--
+-- 가격은 용량이 다르면 비교가 안 되니(코스트코 1L 등) 용량을 함께 받고,
+-- 화면에서는 700ml 기준으로 환산한 값으로 비교해요.
+create table if not exists public.price_reports (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  whisky_id text not null,                 -- src/data/whiskies.ts 의 id
+  store text not null,                     -- src/data/stores.ts 의 id
+  store_note text,                         -- 지점명 등 (예: "월평점")
+  price_krw integer not null check (price_krw between 5000 and 5000000),
+  volume_ml integer not null default 700 check (volume_ml between 200 and 4500),
+  seen_on date not null,
+  note text,
+  created_at timestamptz not null default now(),
+  -- 같은 사람이 같은 날 같은 매장의 같은 병을 두 번 올리는 것만 막아요
+  unique (user_id, whisky_id, store, seen_on)
+);
+
+create index if not exists price_reports_whisky_idx
+  on public.price_reports (whisky_id, seen_on desc);
+create index if not exists price_reports_recent_idx
+  on public.price_reports (seen_on desc, created_at desc);
+
+alter table public.price_reports enable row level security;
+
+-- 시세는 다 같이 보는 정보예요 (로그인 안 해도 읽혀요)
+drop policy if exists "price_reports: everyone reads" on public.price_reports;
+create policy "price_reports: everyone reads"
+  on public.price_reports for select
+  using (true);
+
+drop policy if exists "price_reports: owner inserts" on public.price_reports;
+create policy "price_reports: owner inserts"
+  on public.price_reports for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "price_reports: owner updates" on public.price_reports;
+create policy "price_reports: owner updates"
+  on public.price_reports for update
+  using (auth.uid() = user_id);
+
+-- 본인 제보는 본인이, 엉터리 제보는 관리자가 지울 수 있어요
+drop policy if exists "price_reports: owner or admin deletes" on public.price_reports;
+create policy "price_reports: owner or admin deletes"
+  on public.price_reports for delete
+  using (auth.uid() = user_id or public.is_admin());
+
+-- ---------------------------------------------------------------------------
 -- 관리자 지정 (여기만 본인 것으로 바꿔서 실행하세요)
 -- ---------------------------------------------------------------------------
 -- 1) 이 이메일로 가입하면 자동으로 관리자가 돼요 (다시 가입하거나 계정을 옮길 때 대비).

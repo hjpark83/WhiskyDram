@@ -1,4 +1,6 @@
 import { z } from "zod";
+import type { Persona } from "@/data/persona";
+import { personaText } from "@/lib/ai/persona";
 import { activeProvider, generateJson, toAiError } from "@/lib/ai/provider";
 import {
   profileText,
@@ -34,6 +36,8 @@ export interface NoteHistoryItem {
 }
 
 export interface JournalInput {
+  /** 내 정보 (선택) */
+  persona?: Persona | null;
   whisky: Whisky;
   rating: number;
   review: string;
@@ -108,7 +112,9 @@ export async function generateJournalRecommendation(input: JournalInput): Promis
     nextStep: z.string().describe("다음 후기에서 뭘 살펴보면 좋을지 한두 문장."),
   });
 
+  const persona = personaText(input.persona);
   const userMessage = [
+    ...(persona ? [persona, ""] : []),
     "## 이번에 마신 위스키",
     whiskyCard(input.whisky, null),
     "",

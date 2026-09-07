@@ -14,12 +14,13 @@ import {
   ShieldCheck,
   Sparkles,
   Store,
+  Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /**
- * 메뉴가 10개라 좁은 화면에서는 긴 이름이 다 안 들어가요.
+ * 메뉴가 11개라 좁은 화면에서는 긴 이름이 다 안 들어가요.
  * 그래서 `short` 를 기본으로 보여주고, 넓은 화면(xl)에서만 `label` 을 보여줘요.
  */
 const nav = [
@@ -32,6 +33,7 @@ const nav = [
   { href: "/journal", label: "테이스팅 노트", short: "노트", icon: NotebookPen },
   { href: "/map", label: "증류소 지도", short: "지도", icon: Globe2 },
   { href: "/popup", label: "팝업 스토어", short: "팝업", icon: Store },
+  { href: "/price", label: "위스키 시세", short: "시세", icon: Tag },
   { href: "/glossary", label: "용어 사전", short: "용어", icon: BookOpen },
 ];
 

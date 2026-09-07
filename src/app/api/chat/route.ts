@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getWhisky } from "@/data/whiskies";
 import { runChat, type ChatContext, type ChatEvent } from "@/lib/ai/chat";
+import { personaFromRow, PERSONA_COLUMNS } from "@/lib/ai/persona";
 import { createClient } from "@/lib/supabase/server";
 import { hasProfile } from "@/lib/whisky/recommend";
 import { EMPTY_TASTE_PROFILE, type TasteProfile } from "@/lib/whisky/types";
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return new Response("잘못된 요청이에요.", { status: 400 });
 
-  const [{ data: profileRow }, { data: notes }] = await Promise.all([
+  const [{ data: profileRow }, { data: notes }, { data: personaRow }] = await Promise.all([
     supabase.from("profiles").select("taste_profile").eq("id", user.id).maybeSingle(),
     supabase
       .from("tasting_notes")
@@ -37,6 +38,8 @@ export async function POST(request: Request) {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(5),
+    // 내 정보. 칸이 아직 없으면 조용히 없는 채로 가요.
+    supabase.from("profiles").select(PERSONA_COLUMNS).eq("id", user.id).maybeSingle(),
   ]);
   const stored = (profileRow?.taste_profile as Partial<TasteProfile> | null) ?? null;
   const ctx: ChatContext = {
@@ -46,6 +49,7 @@ export async function POST(request: Request) {
       rating: n.rating ?? 3,
       review: n.review,
     })),
+    persona: personaFromRow(personaRow as Record<string, unknown> | null),
   };
 
   const encoder = new TextEncoder();
