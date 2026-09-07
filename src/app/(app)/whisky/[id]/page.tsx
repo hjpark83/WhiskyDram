@@ -131,6 +131,12 @@ export default async function WhiskyDetailPage({ params }: PageProps<"/whisky/[i
           <div>
             <dt className="text-muted-foreground">가격대</dt>
             <dd className="font-medium">{formatPriceRange(w.priceKrw)}</dd>
+            {/* 사전 가격은 대략적인 범위예요. 실제로 본 값은 제보 시세에서 봐요. */}
+            <dd>
+              <Link href={`/price/${w.id}`} className="text-xs text-amber-300 hover:underline">
+                실제 시세 보기 →
+              </Link>
+            </dd>
           </div>
           <div>
             <dt className="text-muted-foreground">도수</dt>
