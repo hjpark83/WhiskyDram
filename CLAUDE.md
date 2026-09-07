@@ -1,10 +1,14 @@
 @AGENTS.md
 
-# FirstDram — project notes
+# 취중진단 (醉中診斷) — project notes
 
 Hackathon entry (Wanted AI Challenge 2026, deadline 2026-09-20, solo). Ship over polish; keep to the priority order in README.md.
 
 ## Conventions
+
+- 사이트 이름·소개 문구는 `src/data/brand.ts` 한 곳에 있어요. 화면에 이름을 직접 적지 말고
+  `BRAND` / `BRAND_MARK` 를 쓰세요. OG 이미지는 쓰는 글자만 잘라 폰트를 받아오니, 이름을 바꾸면
+  `textForFont` 에도 그 글자가 들어가야 해요 (안 그러면 그 글자만 네모로 나와요).
 
 - Next.js 16: `src/proxy.ts` (not middleware), async `params`/`searchParams`/`cookies()`, use generated `PageProps<"/route">` / `LayoutProps<"/">` helpers. No `next lint` — run `npx eslint .`.
 - shadcn here is the **Base UI** flavor (`base-nova`), not Radix. There is no `asChild`; render as a link with `<Button render={<Link href="..." />}>label</Button>`.

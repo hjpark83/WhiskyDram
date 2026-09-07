@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { BRAND } from "@/data/brand";
 import type { NextRequest } from "next/server";
 import { getWhiskies } from "@/data/whiskies";
 import { decodeShare } from "@/lib/share";
@@ -36,7 +37,10 @@ export async function GET(request: NextRequest) {
   const axisLabels = TASTE_AXES.map((a) => AXIS_LABELS_KO[a]);
 
   const textForFont = [
-    "나는 FirstDram AI 위스키 취향 진단 추천받은 첫 위스키 커피·디저트 취향만 답하면 1분 진단 “” ",
+    // 폰트를 이 글자들만 잘라서 받아와요. 브랜드 이름이 바뀌면 글자도 따라와야
+    // 해서 상수에서 가져와요 — 빠뜨리면 그 글자만 네모로 나와요.
+    `${BRAND.name} ${BRAND.tagline} `,
+    "나는 AI 위스키 취향 진단 추천받은 첫 위스키 커피·디저트 취향만 답하면 1분 진단 “” ",
     title,
     ...lines,
     ...whiskies.map((w) => w.nameKo),
@@ -61,7 +65,7 @@ export async function GET(request: NextRequest) {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 26, color: "#d9a441" }}>
           <span>🥃</span>
-          <span style={{ fontWeight: 700 }}>FirstDram</span>
+          <span style={{ fontWeight: 700 }}>{BRAND.name}</span>
           <span style={{ color: "#b8a58d" }}>· AI 위스키 취향 진단</span>
         </div>
         <div style={{ display: "flex", fontSize: 72, fontWeight: 700, marginTop: 24, color: "#f3e7d3" }}>

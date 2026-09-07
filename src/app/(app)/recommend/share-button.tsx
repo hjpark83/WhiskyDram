@@ -1,4 +1,5 @@
 "use client";
+import { BRAND } from "@/data/brand";
 
 import { useState } from "react";
 import { Check, Share2 } from "lucide-react";
@@ -13,7 +14,7 @@ export function ShareButton({ query, title }: { query: string; title: string }) 
     const text = `나는 "${title}" 타입! AI가 골라준 내 첫 위스키 3병 🥃`;
     if (navigator.share) {
       try {
-        await navigator.share({ title: "FirstDram 취향 결과", text, url });
+        await navigator.share({ title: `${BRAND.name} 취향 결과`, text, url });
         return;
       } catch {
         // 취소했거나 지원 안 함 → 복사로
