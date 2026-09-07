@@ -52,16 +52,20 @@ export async function scanBottle(input: ScanInput): Promise<ScanPayload> {
   const provider = activeProvider();
   if (!provider) return fallbackScan();
 
-  const ids = ["unknown", ...WHISKIES.map((w) => w.id)] as [string, ...string[]];
   const personalized = hasProfile(input.profile);
 
   const Schema = z.object({
     readText: z.string().describe("라벨에서 읽은 글자 그대로. 못 읽으면 빈 문자열."),
     guessName: z.string().describe("추정한 병 이름 (한글 또는 영문)."),
-    whiskyId: z.enum(ids).describe("사전 id. 없으면 unknown."),
+    // 사전 id 를 enum 으로 넘기지 않아요.
+    // 사전이 크고 id 가 두 곳(whiskyId, alternatives)에 들어가서, enum 으로 만들면
+    // Gemini responseSchema 한도를 넘어 400 (invalid argument) 이 나요.
+    // 목록은 이미 시스템 프롬프트에 있으니 모델은 문자열로 답하고,
+    // 진짜 있는 id 인지는 아래에서 코드가 대조해요 (지어내도 안전해요).
+    whiskyId: z.string().describe('사전 목록의 id 를 그대로. 사전에 없으면 "unknown".'),
     confidence: z.enum(["high", "medium", "low"]),
     alternatives: z
-      .array(z.enum(ids))
+      .array(z.string())
       .max(3)
       .describe("헷갈릴 수 있는 다른 사전 id (같은 브랜드의 다른 연수 등). 없으면 빈 배열."),
     verdict: z
@@ -90,8 +94,10 @@ export async function scanBottle(input: ScanInput): Promise<ScanPayload> {
       effort: "medium",
     });
 
-    const whiskyId = out.whiskyId === "unknown" ? null : out.whiskyId;
-    const whisky = whiskyId ? WHISKIES.find((w) => w.id === whiskyId) : undefined;
+    // 사전에 **실제로 있는** id 만 받아들여요. 모델이 그럴듯한 id 를 지어내도
+    // 여기서 걸러지고 unknown 으로 떨어져요.
+    const whisky = WHISKIES.find((w) => w.id === out.whiskyId.trim());
+    const whiskyId = whisky?.id ?? null;
     const percent = whisky && input.profile ? matchPercent(input.profile, whisky) : null;
 
     return {
@@ -100,7 +106,9 @@ export async function scanBottle(input: ScanInput): Promise<ScanPayload> {
       guessName: out.guessName,
       whiskyId,
       confidence: out.confidence,
-      alternatives: out.alternatives.filter((a) => a !== "unknown" && a !== whiskyId),
+      alternatives: out.alternatives
+        .map((a) => a.trim())
+        .filter((a) => a !== whiskyId && WHISKIES.some((w) => w.id === a)),
       verdict: whisky ? out.verdict : null,
       percent,
       generatedBy: "ai",

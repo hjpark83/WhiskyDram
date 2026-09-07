@@ -33,6 +33,22 @@ const ALLOWED_SCHEMA_KEYS = new Set([
 ]);
 const ALLOWED_TYPES = new Set(["STRING", "NUMBER", "INTEGER", "BOOLEAN", "ARRAY", "OBJECT"]);
 
+/**
+ * Gemini responseSchema 의 enum 값 총 개수 한도.
+ * 사전 전체(수백 병)를 enum 으로 넘기면 실제 API 가
+ * "Request contains an invalid argument." 로만 거절해서 원인을 알기 어려워요.
+ * 여기서 세어 알려줘야 키 없이도 잡혀요.
+ */
+const MAX_ENUM_VALUES = 500;
+
+function countEnums(node) {
+  if (!node || typeof node !== "object") return 0;
+  let n = Array.isArray(node.enum) ? node.enum.length : 0;
+  if (node.items) n += countEnums(node.items);
+  for (const v of Object.values(node.properties ?? {})) n += countEnums(v);
+  return n;
+}
+
 function validateSchema(node, path = "$") {
   if (node === null || typeof node !== "object") {
     throw new Error(`${path}: 스키마 노드가 객체가 아니에요`);
@@ -199,6 +215,14 @@ const server = createServer(async (req, res) => {
     if (!schema) return fail(res, 400, "responseSchema 가 없어요");
     try {
       validateSchema(schema);
+      const enums = countEnums(schema);
+      if (enums > MAX_ENUM_VALUES) {
+        throw new Error(
+          `enum 값이 전부 합쳐 ${enums}개예요 (한도 ${MAX_ENUM_VALUES}). ` +
+            `사전 전체를 enum 으로 넘기지 말고 문자열로 받아 코드에서 대조하세요 — ` +
+            `실제 API 는 이걸 "Request contains an invalid argument." 로만 알려줘요`,
+        );
+      }
     } catch (error) {
       return fail(res, 400, `responseSchema 문제 — ${error.message}`);
     }
@@ -225,6 +249,21 @@ const server = createServer(async (req, res) => {
     }
   }
   const alreadyCalled = body.contents.some((c) => c.parts.some((p) => p.functionResponse));
+
+  // Gemini 3.x 는 functionCall 파트에 붙여준 thoughtSignature 를 되돌려받아야 해요.
+  // 빠지면 실제 API 가 400 으로 거절하니, 여기서도 똑같이 거절해요.
+  for (const [i, c] of body.contents.entries()) {
+    for (const p of c.parts) {
+      if (p.functionCall && !p.thoughtSignature) {
+        return fail(
+          res,
+          400,
+          `Function call is missing a thought_signature in functionCall parts. ` +
+            `(contents[${i}] 의 \`${p.functionCall.name}\` — 받은 서명을 그대로 되돌려 보내세요)`,
+        );
+      }
+    }
+  }
   console.log(`  도구 ${decls.length}개 · ${alreadyCalled ? "도구 결과 받음 → 마무리 응답" : "첫 턴 → 도구 호출"}`);
 
   res.writeHead(200, {
@@ -238,7 +277,13 @@ const server = createServer(async (req, res) => {
 
   if (!alreadyCalled && decls.length > 0) {
     send(part({ text: "잠깐 찾아볼게요. " }));
-    send(part({ functionCall: { name: decls[0].name, args: { query: "삼겹살", limit: 3 } } }));
+    // 실제 Gemini 처럼 서명을 함께 실어 보내요 — 앱이 이걸 되돌려줘야 해요
+    send(
+      part({
+        functionCall: { name: decls[0].name, args: { query: "삼겹살", limit: 3 } },
+        thoughtSignature: "mock-thought-signature",
+      }),
+    );
   } else {
     // 한 글자씩 흘려보내 SSE 조립을 확인해요
     for (const chunk of ["찾았어요! ", "삼겹살에는 ", "연기 향이 ", "은은한 병이 잘 맞아요."]) {

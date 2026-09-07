@@ -195,6 +195,12 @@ function hintForError(error: unknown): string {
   return "위 메시지를 그대로 검색해보거나 서버 로그를 확인해주세요.";
 }
 
+/**
+ * 점검 사이에 두는 간격. 가짜 서버로 돌릴 때는 기다릴 이유가 없어요.
+ * (`AI_CHECK_GAP_MS` 로 조절할 수 있어요.)
+ */
+const GAP_MS = Number(process.env.AI_CHECK_GAP_MS ?? (process.env.GEMINI_BASE_URL ? 0 : 4000));
+
 /** 점검 하나를 돌려요. 예외가 새지 않아요. */
 async function runOne(meta: CheckMeta): Promise<CheckResult> {
   const started = Date.now();
@@ -231,6 +237,11 @@ export async function runAiSelfCheck(only?: CheckId[]): Promise<SelfCheckReport>
 
   const wanted = only?.length ? CHECKS.filter((c) => only.includes(c.id)) : CHECKS;
   const results: CheckResult[] = [];
-  for (const meta of wanted) results.push(await runOne(meta));
+  for (const [i, meta] of wanted.entries()) {
+    // Gemini 무료 등급은 분당 요청 수가 20건이라 연달아 부르면 429 가 나요.
+    // 그러면 "키가 잘못됐다"고 착각하게 되니 사이를 좀 띄워요.
+    if (i > 0) await new Promise((r) => setTimeout(r, GAP_MS));
+    results.push(await runOne(meta));
+  }
   return { provider, endpoint, results, ms: Date.now() - started };
 }
