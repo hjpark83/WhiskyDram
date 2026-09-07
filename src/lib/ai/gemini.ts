@@ -210,8 +210,20 @@ export async function geminiGenerateJson<T>(req: {
     .join("");
 
   if (!text.trim()) {
-    const reason = candidate?.finishReason;
-    throw new AiError(`빈 응답을 받았어요${reason ? ` (${String(reason)})` : ""}.`, "other");
+    const reason = String(candidate?.finishReason ?? "");
+    const usage = asRecord(body?.usageMetadata);
+    const thoughts = Number(usage?.thoughtsTokenCount ?? 0);
+    // 생각하는 모델은 생각에도 출력 예산을 쓰기 때문에, 예산이 모자라면
+    // 글자가 하나도 안 온 채로 MAX_TOKENS 로 끝나요. 원인을 바로 알려줘요.
+    const hint =
+      reason === "MAX_TOKENS"
+        ? ` — 출력 예산(maxOutputTokens)을 생각(thinking)에 다 썼어요${
+            thoughts ? ` (생각 ${thoughts}토큰)` : ""
+          }. maxTokens 를 늘려주세요.`
+        : reason === "SAFETY" || reason === "PROHIBITED_CONTENT"
+          ? " — 안전 필터에 걸렸어요."
+          : "";
+    throw new AiError(`빈 응답을 받았어요${reason ? ` (${reason})` : ""}.${hint}`, "other");
   }
 
   let raw: unknown;
