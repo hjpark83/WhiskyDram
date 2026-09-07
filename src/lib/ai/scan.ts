@@ -90,7 +90,10 @@ export async function scanBottle(input: ScanInput): Promise<ScanPayload> {
       images: [{ mediaType: input.mediaType, base64: input.imageBase64 }],
       schema: Schema,
       schemaName: "bottle_scan",
-      maxTokens: 2048,
+      // Gemini 3.x 등 생각하는 모델은 **생각에도 출력 예산을 써요**.
+      // 2048 이면 사전(수백 병) + 이미지가 들어간 이 요청에선 답이 비어버려요
+      // (finishReason: MAX_TOKENS → 폴백). 넉넉하게 둬요.
+      maxTokens: 8192,
       effort: "medium",
     });
 
