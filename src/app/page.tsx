@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BRAND, BRAND_MARK } from "@/data/brand";
 import {
   BookOpen,
   Camera,
@@ -66,7 +67,7 @@ export default function LandingPage() {
   return (
     <main className="flex-1">
       <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-        <span className="brand text-xl font-bold text-amber-300">🥃 FirstDram</span>
+        <span className="brand text-xl font-bold text-amber-300">{BRAND_MARK}</span>
         <Button variant="ghost" render={<Link href="/login" />}>
           로그인
         </Button>
@@ -75,7 +76,10 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="mx-auto grid max-w-5xl items-center gap-10 px-6 pb-16 pt-10 lg:grid-cols-[1.1fr_1fr] lg:pt-16">
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-          <p className="mb-4 text-sm font-medium text-amber-400">Your first dram, chosen for you.</p>
+          {/* 이름이 말장난이라 뜻을 한 번 풀어줘요 — 처음 온 사람도 바로 알아듣게 */}
+          <p className="mb-4 text-sm font-medium text-amber-400">
+            {BRAND.tagline} <span className="text-amber-400/60">· {BRAND.hanja}</span>
+          </p>
           <h1 className="text-4xl leading-tight tracking-tight sm:text-5xl">
             <span className="text-shine">위스키, 뭐부터</span>
             <br />
@@ -181,7 +185,7 @@ export default function LandingPage() {
       </section>
 
       <footer className="border-t py-8 text-center text-xs text-muted-foreground">
-        FirstDram · Wanted AI Challenge 2026 · 술은 성인만, 적당히.
+        {BRAND.name} · Wanted AI Challenge 2026 · 술은 성인만, 적당히.
       </footer>
     </main>
   );

@@ -1,4 +1,5 @@
 "use client";
+import { BRAND } from "@/data/brand";
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -151,7 +152,7 @@ export function BottlingLoader({
           <g opacity={labelOpacity}>
             <rect x="221" y="148" width="36" height="24" rx="2" fill="#f3e7d3" stroke="#c9a24f" />
             <text x="239" y="158" textAnchor="middle" fontSize="6" fontWeight="700" fill="#5a341a" fontFamily="serif">
-              FirstDram
+              {BRAND.name}
             </text>
             <text x="239" y="167" textAnchor="middle" fontSize="5" fill="#8a6b34">
               {finished ? "SINGLE PICK" : "···"}

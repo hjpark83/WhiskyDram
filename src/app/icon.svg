@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="위스키 잔">
+  <!-- 16px 에서도 읽히도록 형태를 크게, 대비를 세게 잡았어요 -->
+  <rect width="64" height="64" rx="14" fill="#14110d"/>
+  <!-- 잔에 담긴 위스키 -->
+  <path d="M19.1 32 L21 47 A3 3 0 0 0 24 50 L40 50 A3 3 0 0 0 43 47 L44.9 32 Z" fill="#f0a92b"/>
+  <!-- 잔 외곽 -->
+  <path d="M17 16 L21 47 A3 3 0 0 0 24 50 L40 50 A3 3 0 0 0 43 47 L47 16 Z"
+        fill="none" stroke="#f5d18a" stroke-width="3.2" stroke-linejoin="round"/>
+  <!-- 표면에 비치는 빛 -->
+  <path d="M20.4 33.4 L43.6 33.4" stroke="#ffe6b0" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
+</svg>

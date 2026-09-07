@@ -7,6 +7,7 @@ import {
   type AiToolResult,
   type AiTurn,
 } from "@/lib/ai/provider";
+import { BRAND } from "@/data/brand";
 import type { Persona } from "@/data/persona";
 import { personaText } from "@/lib/ai/persona";
 import { profileText, whiskyCard } from "@/lib/ai/recommend";
@@ -230,7 +231,7 @@ function executeTool(
 // 시스템 프롬프트
 // ---------------------------------------------------------------------------
 
-const BASE_PROMPT = `당신은 FirstDram 의 AI 소믈리에예요. 위스키를 처음 시작하는 한국인과 대화해요.
+const BASE_PROMPT = `당신은 ${BRAND.name} 의 AI 소믈리에예요. 위스키를 처음 시작하는 한국인과 대화해요.
 
 원칙:
 - 한국어, 부드러운 ~해요체. 친구처럼 짧게. 답변은 보통 3~6문장, 병 추천은 최대 3병.
