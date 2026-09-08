@@ -74,6 +74,20 @@ export type StyleTag = (typeof STYLE_TAGS)[number];
 /** 원산지 분류 (country 에서 파생) */
 export type Origin = "scotch" | "irish" | "japanese" | "american" | "korean" | "other";
 
+/**
+ * 병 실루엣.
+ *  - 둥근 병: malt / squat / bourbon / irish / japanese / flagon
+ *  - 납작하고 각진 병: squared (조니워커처럼 단면이 사각에 가까운 것)
+ */
+export type BottleShape =
+  | "malt"
+  | "squat"
+  | "bourbon"
+  | "irish"
+  | "japanese"
+  | "flagon"
+  | "squared";
+
 export interface Whisky {
   id: string; // slug, e.g. "glenmorangie-10"
   name: string; // English
@@ -91,6 +105,11 @@ export interface Whisky {
   flavor: FlavorProfile;
   notes: { nose: string; palate: string; finish: string }; // 초보자 언어
   beginnerTip: string; // "이런 분께 좋아요 / 이런 점은 주의"
+  /**
+   * 병 모양 (선택). 안 적으면 종류·스타일에서 자동으로 골라요.
+   * 로얄 살루트 호리병, 조니워커 사각병처럼 눈에 띄게 다른 것만 적어요.
+   */
+  bottleShape?: BottleShape;
   /**
    * 이 브랜드·병에 얽힌 이야기 (선택).
    *

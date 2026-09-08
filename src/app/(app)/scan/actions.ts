@@ -5,7 +5,7 @@ import { getWhisky } from "@/data/whiskies";
 import { scanBottle, type ScanPayload } from "@/lib/ai/scan";
 import { createClient } from "@/lib/supabase/server";
 import { formatPriceRange, TYPE_SHORT_KO } from "@/lib/whisky/format";
-import { bytesFromBase64, saveBottlePhoto } from "@/lib/whisky/photos";
+import { BOTTLE_PHOTO_BUCKET, bytesFromBase64, saveBottlePhoto } from "@/lib/whisky/photos";
 import { hasProfile } from "@/lib/whisky/recommend";
 import { EMPTY_TASTE_PROFILE, type TasteProfile, type Whisky } from "@/lib/whisky/types";
 
@@ -26,7 +26,15 @@ export interface ScanWhiskySummary {
 }
 
 export type ScanResult =
-  | { ok: true; result: ScanPayload; whisky: ScanWhiskySummary | null; alternatives: ScanWhiskySummary[]; personalized: boolean }
+  | {
+      ok: true;
+      result: ScanPayload;
+      whisky: ScanWhiskySummary | null;
+      alternatives: ScanWhiskySummary[];
+      personalized: boolean;
+      /** 방금 저장한 사진 행. 라벨·색을 이어서 채우려고 돌려줘요. */
+      photoId: string | null;
+    }
   | { ok: false; error: string };
 
 function summarize(w: Whisky): ScanWhiskySummary {
@@ -75,6 +83,7 @@ export async function submitScan(raw: z.infer<typeof inputSchema>): Promise<Scan
     };
   }
 
+  let photoId: string | null = null;
   const whisky = result.whiskyId ? getWhisky(result.whiskyId) : undefined;
   const alternatives = result.alternatives
     .map((id) => getWhisky(id))
@@ -95,7 +104,7 @@ export async function submitScan(raw: z.infer<typeof inputSchema>): Promise<Scan
     // 엉뚱한 병에 사진을 붙이면 안 되니, 확신도가 높을 때만 저장해요.
     // 저장에 실패해도 스캔 결과는 그대로 보여줘요.
     if (result.confidence === "high") {
-      await saveBottlePhoto(supabase, {
+      photoId = await saveBottlePhoto(supabase, {
         userId: user.id,
         whiskyId: whisky.id,
         bytes: bytesFromBase64(parsed.data.imageBase64),
@@ -111,5 +120,55 @@ export async function submitScan(raw: z.infer<typeof inputSchema>): Promise<Scan
     whisky: whisky ? summarize(whisky) : null,
     alternatives,
     personalized: profile !== null,
+    photoId,
   };
+}
+
+
+/**
+ * 사진에서 꺼낸 라벨 그림과 액체 색을 방금 저장한 사진에 채워요.
+ *
+ * 브라우저에서 캔버스로 잘라 보낸 결과만 받아요 — 원본을 다시 올리지 않아요.
+ * 실패해도 조용히 넘어가요. 스캔은 이미 끝났고, 이건 3D 병을 더 예쁘게 하는
+ * 덤이라 여기서 오류를 띄우면 사용자만 놀라요.
+ */
+const appearanceSchema = z.object({
+  photoId: z.string().uuid(),
+  whiskyId: z.string().min(1),
+  labelPng: z.string().startsWith("data:image/png;base64,").max(4_000_000).nullable(),
+  liquidHex: z.string().regex(/^#[0-9a-f]{6}$/i).nullable(),
+});
+
+export async function saveScanAppearance(raw: unknown): Promise<void> {
+  const parsed = appearanceSchema.safeParse(raw);
+  if (!parsed.success) return;
+  const { photoId, whiskyId, labelPng, liquidHex } = parsed.data;
+  if (!labelPng && !liquidHex) return;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  let labelPath: string | null = null;
+  if (labelPng) {
+    const bytes = bytesFromBase64(labelPng.split(",")[1] ?? "");
+    const path = `${user.id}/${whiskyId}/label-${crypto.randomUUID()}.png`;
+    const { error } = await supabase.storage
+      .from(BOTTLE_PHOTO_BUCKET)
+      .upload(path, bytes, { contentType: "image/png", upsert: false });
+    if (error) console.error("[scan] 라벨 그림 업로드 실패", error);
+    else labelPath = path;
+  }
+
+  const { error } = await supabase
+    .from("whisky_photos")
+    .update({
+      ...(labelPath ? { label_path: labelPath } : {}),
+      ...(liquidHex ? { liquid_hex: liquidHex.toLowerCase() } : {}),
+    })
+    .eq("id", photoId)
+    .eq("user_id", user.id);
+  if (error) console.error("[scan] 라벨·색 저장 실패", error);
 }

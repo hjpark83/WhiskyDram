@@ -586,6 +586,31 @@ create policy "whisky_photos: owner inserts"
   with check (user_id = auth.uid() and (source <> 'commons' or public.is_admin()));
 
 -- ---------------------------------------------------------------------------
+-- whisky_photos 확장: 사진에서 꺼낸 라벨 그림과 액체 색
+--
+--   3D 병은 이름으로 그린 가짜 라벨을 감고, 액체 색은 숙성·통 종류로 계산해요.
+--   그런데 누군가 그 병을 스캔하면 진짜 라벨과 진짜 색이 사진 안에 있어요.
+--   그걸 꺼내 두면 **모든 사람의 3D 병**이 실물에 가까워져요.
+-- ---------------------------------------------------------------------------
+alter table public.whisky_photos add column if not exists label_path text;
+alter table public.whisky_photos add column if not exists liquid_hex text;
+
+-- 색은 #rrggbb 만 (엉뚱한 값이 들어가면 3D 가 검게 나와요)
+alter table public.whisky_photos drop constraint if exists whisky_photos_liquid_hex;
+alter table public.whisky_photos
+  add constraint whisky_photos_liquid_hex
+  check (liquid_hex is null or liquid_hex ~ '^#[0-9a-fA-F]{6}$');
+
+-- 올린 본인이 나중에 라벨·색을 채울 수 있어야 해요 (스캔 직후에 채워요).
+-- 공개 여부(approved)는 여전히 관리자만 바꿔요.
+drop policy if exists "whisky_photos: owner fills appearance" on public.whisky_photos;
+create policy "whisky_photos: owner fills appearance"
+  on public.whisky_photos for update
+  to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid() and approved = false);
+
+-- ---------------------------------------------------------------------------
 -- posts / post_comments: 공개 후기 글과 댓글
 --
 --   tasting_notes 와 다른 것이에요. 노트는 **나만 보는 기록**이고 취향 벡터를

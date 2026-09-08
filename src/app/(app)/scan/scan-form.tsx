@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MatchBadge } from "@/components/whisky/whisky-card";
 import { STYLE_EMOJI, STYLE_LABELS_KO } from "@/lib/whisky/format";
-import { submitScan, type ScanResult } from "./actions";
+import { extractAppearance } from "@/lib/whisky/appearance";
+import { saveScanAppearance, submitScan, type ScanResult } from "./actions";
 
 const MAX_EDGE = 1280;
 
@@ -63,6 +64,21 @@ export function ScanForm({ personalized }: { personalized: boolean }) {
     setRevealed(null);
     startTransition(async () => {
       const r = await submitScan({ imageBase64: base64, mediaType: "image/jpeg" });
+
+      // 인식이 끝났으면 사진에서 진짜 라벨 그림과 액체 색을 꺼내 저장해요.
+      // 이걸로 그 병의 3D 가 모두에게 실물에 가까워져요. 실패해도 조용히 넘어가요 —
+      // 스캔은 이미 끝났고 이건 덤이라, 여기서 오류를 띄우면 사용자만 놀라요.
+      if (r.ok && r.photoId && r.whisky && preview && r.result.regions.length > 0) {
+        const { labelDataUrl, liquidHex } = await extractAppearance(preview, r.result.regions);
+        if (labelDataUrl || liquidHex) {
+          await saveScanAppearance({
+            photoId: r.photoId,
+            whiskyId: r.whisky.id,
+            labelPng: labelDataUrl,
+            liquidHex,
+          });
+        }
+      }
       setOutcome(r);
       if (!r.ok) {
         toast.error(r.error);
