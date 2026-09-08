@@ -5,12 +5,9 @@ import { z } from "zod";
 import { QUIZ_QUESTIONS, SCENE_FROM_ANSWER, type QuizAnswers } from "@/data/quiz";
 import { personaFromRow, PERSONA_COLUMNS } from "@/lib/ai/persona";
 import { generateQuizRecommendation } from "@/lib/ai/recommend";
+import { analyzeTaste } from "@/lib/ai/taste";
 import { createClient } from "@/lib/supabase/server";
-import {
-  filtersFromAnswers,
-  profileFromAnswers,
-  rankWhiskies,
-} from "@/lib/whisky/recommend";
+import { filtersFromAnswers, rankWhiskies } from "@/lib/whisky/recommend";
 
 const answersSchema = z.object(
   Object.fromEntries(
@@ -36,10 +33,6 @@ export async function submitQuiz(raw: QuizAnswers): Promise<SubmitQuizResult> {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/quiz");
 
-  const profile = profileFromAnswers(answers);
-  const filters = filtersFromAnswers(answers);
-  const candidates = rankWhiskies(profile, filters, 8);
-
   // 내 정보를 함께 넘겨요 (칸이 아직 없으면 조용히 건너뛰어요)
   const { data: personaRow } = await supabase
     .from("profiles")
@@ -48,7 +41,18 @@ export async function submitQuiz(raw: QuizAnswers): Promise<SubmitQuizResult> {
     .maybeSingle();
   const persona = personaFromRow(personaRow as Record<string, unknown> | null);
 
+  // 취향 벡터부터 AI 가 만들어요. 이게 어떤 병이 후보에 오르는지를 정해요.
+  // 키가 없거나 호출이 실패하면 선택지 숫자를 더한 값으로 돌아가요.
+  const taste = await analyzeTaste(answers, persona);
+  const profile = taste.profile;
+  const filters = filtersFromAnswers(answers);
+  const candidates = rankWhiskies(profile, filters, 8);
+
   const payload = await generateQuizRecommendation({ profile, answers, candidates, persona });
+  payload.tasteAnalysis = {
+    summary: taste.summary,
+    generatedBy: taste.generatedBy,
+  };
 
   // 진단에서 고른 "어떤 자리" 는 내 정보의 마시는 상황과 같은 것이라 이어줘요.
   // 이미 내 정보에 적어둔 게 있으면 덮어쓰지 않아요 — 직접 고른 쪽이 우선이에요.

@@ -29,37 +29,84 @@ export function clampProfile(p: TasteProfile): TasteProfile {
 
 /** 진단 답변 → 취향 프로필 (-2..+2) */
 /**
- * 축마다 "최대로 나올 수 있는 합" — 질문지를 늘려도 자동으로 다시 계산돼요.
+ * 축마다 **양수 쪽과 음수 쪽을 따로** 재요 — 질문지를 늘려도 자동으로 다시 계산돼요.
  *
- * 예전엔 합을 2로 나눴는데, 질문이 늘면 합이 커져서 대부분의 축이 ±2 에 박혀요
- * (전부 "아주 좋아함" 이 되면 취향 구분이 사라져요). 그래서 고정 숫자 대신
- * 각 축이 이론상 도달할 수 있는 최댓값으로 나눠 -2..+2 로 폅니다.
+ * 예전엔 max|델타| 의 합 하나로 나눴는데, 그러면 "싫어요" 가 절반 눈금밖에 못 써요.
+ * 피트가 그랬어요: 원점수가 [-2, +4] 인데 분모가 4 라서, 제일 강한 거부인
+ * "연기 냄새는 싫어요"(-2) 를 골라도 -1 까지밖에 안 내려갔어요. 좋아함은 +2 로
+ * 꽉 차는데 싫어함만 반쪽이었던 거예요.
+ *
+ * 그래서 도달 가능한 양수 합·음수 합으로 각각 나눠, 양쪽 다 끝까지 쓰게 했어요.
  */
-const AXIS_SCALE: Record<TasteAxis, number> = (() => {
-  const scale = Object.fromEntries(TASTE_AXES.map((a) => [a, 0])) as Record<TasteAxis, number>;
+const AXIS_SCALE: Record<TasteAxis, { pos: number; neg: number }> = (() => {
+  const scale = Object.fromEntries(
+    TASTE_AXES.map((a) => [a, { pos: 0, neg: 0 }]),
+  ) as Record<TasteAxis, { pos: number; neg: number }>;
   for (const q of QUIZ_QUESTIONS) {
     for (const axis of TASTE_AXES) {
-      const strongest = Math.max(0, ...q.options.map((o) => Math.abs(o.delta?.[axis] ?? 0)));
-      scale[axis] += strongest;
+      const deltas = q.options.map((o) => o.delta?.[axis] ?? 0);
+      scale[axis].pos += Math.max(0, ...deltas);
+      scale[axis].neg += Math.abs(Math.min(0, ...deltas));
     }
   }
   return scale;
 })();
 
+export type AxisBounds = Partial<Record<TasteAxis, { min?: number; max?: number }>>;
+
+/**
+ * 그 축을 **직접** 물어본 답이 정한 범위.
+ *
+ * AI 취향 분석도 이 범위를 지켜야 해요. "연기 냄새는 싫어요" 라고 직접 답했는데
+ * AI 가 다른 답을 보고 피트를 +1 로 올려버리면 안 되니까요.
+ */
+export function decisiveBounds(answers: QuizAnswers): AxisBounds {
+  const bounds: AxisBounds = {};
+  for (const q of QUIZ_QUESTIONS) {
+    const option = q.options.find((o) => o.id === answers[q.id]);
+    for (const [axis, b] of Object.entries(option?.decisive ?? {})) {
+      const prev = bounds[axis as TasteAxis] ?? {};
+      bounds[axis as TasteAxis] = {
+        min: b.min === undefined ? prev.min : Math.max(prev.min ?? -Infinity, b.min),
+        max: b.max === undefined ? prev.max : Math.min(prev.max ?? Infinity, b.max),
+      };
+    }
+  }
+  return bounds;
+}
+
+/** 직접 물어본 답이 정한 범위로 프로필을 잘라요 */
+export function applyBounds(profile: TasteProfile, bounds: AxisBounds): TasteProfile {
+  const out = { ...profile };
+  for (const axis of TASTE_AXES) {
+    const b = bounds[axis];
+    if (b?.max !== undefined) out[axis] = Math.min(out[axis], b.max);
+    if (b?.min !== undefined) out[axis] = Math.max(out[axis], b.min);
+  }
+  return clampProfile(out);
+}
+
 export function profileFromAnswers(answers: QuizAnswers): TasteProfile {
   const raw: TasteProfile = { ...EMPTY_TASTE_PROFILE };
+  const bounds = decisiveBounds(answers);
+
   for (const q of QUIZ_QUESTIONS) {
-    const optionId = answers[q.id];
-    const option = q.options.find((o) => o.id === optionId);
-    if (!option?.delta) continue;
-    for (const [axis, d] of Object.entries(option.delta)) {
+    const option = q.options.find((o) => o.id === answers[q.id]);
+    for (const [axis, d] of Object.entries(option?.delta ?? {})) {
       raw[axis as keyof TasteProfile] += d ?? 0;
     }
   }
-  // 축별 최댓값으로 나눠 -2..+2 로 폅니다 (질문 수와 무관하게 같은 눈금)
+
+  // 양수·음수 쪽을 각각의 최댓값으로 나눠 -2..+2 로 폅니다 (질문 수와 무관하게 같은 눈금)
   for (const axis of TASTE_AXES) {
-    const max = AXIS_SCALE[axis];
+    const { pos, neg } = AXIS_SCALE[axis];
+    const max = raw[axis] >= 0 ? pos : neg;
     raw[axis] = max > 0 ? Math.round((raw[axis] / max) * 2) : 0;
+
+    // 직접 물어본 답이 간접 힌트에 밀리지 않게 마지막에 한 번 더 잘라요
+    const b = bounds[axis];
+    if (b?.max !== undefined) raw[axis] = Math.min(raw[axis], b.max);
+    if (b?.min !== undefined) raw[axis] = Math.max(raw[axis], b.min);
   }
   return clampProfile(raw);
 }
@@ -111,14 +158,30 @@ export function hasProfile(profile: Partial<TasteProfile> | null | undefined) {
 // ---------------------------------------------------------------------------
 
 /**
+ * 싫다고 답한 축의 가중치.
+ *
+ * 사람은 좋아하는 향보다 싫어하는 향에 훨씬 민감해요. "연기 싫어요" 라고 답한
+ * 사람에게는 나머지가 아무리 맞아도 피트 위스키가 좋은 추천이 아니에요.
+ * 그런데 예전엔 7개 축을 똑같이 더해서, 단맛·오크·바디가 잘 맞으면 그 셋이
+ * 피트 감점을 이기고 라가불린이 1등으로 올라왔어요.
+ */
+const DISLIKE_WEIGHT = 1.6;
+
+/** 그 축의 가중치 (싫어하는 쪽을 더 무겁게) */
+function axisWeight(pref: number): number {
+  return pref < 0 ? DISLIKE_WEIGHT : 1;
+}
+
+/**
  * 취향(-2..+2) · 향미(0..5) 적합도.
- * 향미를 중앙(2.5) 기준으로 -2.5..+2.5 로 옮긴 뒤 내적. 범위는 대략 -35..+35.
+ * 향미를 중앙(2.5) 기준으로 -2.5..+2.5 로 옮긴 뒤 내적.
  * 사용자가 신경 안 쓰는 축(0)은 자연스럽게 무시돼요.
  */
 export function matchScore(profile: TasteProfile, whisky: Whisky): number {
   let score = 0;
   for (const axis of TASTE_AXES) {
-    score += profile[axis] * (whisky.flavor[axis] - 2.5);
+    const pref = profile[axis];
+    score += pref * (whisky.flavor[axis] - 2.5) * axisWeight(pref);
   }
   return score;
 }
@@ -126,17 +189,47 @@ export function matchScore(profile: TasteProfile, whisky: Whisky): number {
 /** 0..100 로 보기 좋게 정규화한 적합도. 프로필이 비어 있으면 null. */
 export function matchPercent(profile: TasteProfile, whisky: Whisky): number | null {
   if (!hasProfile(profile)) return null;
-  // 이 프로필에서 가능한 최대 점수 = Σ |pref| * 2.5
-  const max = TASTE_AXES.reduce((acc, a) => acc + Math.abs(profile[a]) * 2.5, 0);
+  // 이 프로필에서 가능한 최대 점수 = Σ |pref| * 2.5 * 가중치
+  const max = TASTE_AXES.reduce(
+    (acc, a) => acc + Math.abs(profile[a]) * 2.5 * axisWeight(profile[a]),
+    0,
+  );
   if (max === 0) return null;
   const s = matchScore(profile, whisky);
   return Math.round(((s / max + 1) / 2) * 100);
+}
+
+/**
+ * "싫어요" 가 가중치가 아니라 **거르는 조건**인 축.
+ *
+ * 연기(피트)와 자극(스파이시)은 정도의 문제가 아니라 호불호가 갈리는 향이에요.
+ * 싫다고 답했으면 점수를 깎는 게 아니라 후보에서 빼는 게 맞아요. 반대로
+ * 단맛·오크·바디는 "덜한 게 좋다" 는 정도 차이라 가중치로만 봐요.
+ */
+const AVERSION_AXES = ["peat", "spice"] as const;
+
+/** 싫다고 답한 향이 강한 병인가요? */
+export function isAverted(profile: TasteProfile, whisky: Whisky): boolean {
+  for (const axis of AVERSION_AXES) {
+    const pref = profile[axis] ?? 0;
+    if (pref > -1) continue;
+    let intensity = whisky.flavor[axis];
+    // 향미 숫자가 낮아도 피트로 파는 병이면 피트로 쳐요
+    if (axis === "peat" && whisky.styles.includes("peated")) {
+      intensity = Math.max(intensity, 3);
+    }
+    // 아주 싫으면(-2) 은은한 것까지, 그냥 싫으면(-1) 뚜렷한 것만 빼요
+    if (intensity >= (pref <= -2 ? 3 : 4)) return true;
+  }
+  return false;
 }
 
 export interface CandidateFilters {
   maxPriceKrw?: number | null;
   maxDifficulty?: 1 | 2 | 3 | 4 | 5;
   excludeIds?: string[];
+  /** 한정판(싱글 캐스크·품절)도 후보에 넣을지. 기본은 안 넣어요 — 살 수 없으니까요. */
+  includeLimited?: boolean;
 }
 
 export function filtersFromAnswers(answers: QuizAnswers): CandidateFilters {
@@ -162,7 +255,14 @@ export function rankWhiskies(
   limit = 8,
 ): ScoredWhisky[] {
   const excluded = new Set(filters.excludeIds ?? []);
-  const base = WHISKIES.filter((w) => !excluded.has(w.id));
+  // 싫다고 답한 향과 살 수 없는 한정판은 여기서 미리 빼요.
+  // 아래 완화 단계에서도 다시 들어오면 안 되니까 앞에서 걸러요.
+  const base = WHISKIES.filter(
+    (w) =>
+      !excluded.has(w.id) &&
+      !isAverted(profile, w) &&
+      (filters.includeLimited || !w.limited),
+  );
 
   const strict = base.filter((w) => {
     if (filters.maxPriceKrw && w.priceKrw[0] > filters.maxPriceKrw) return false;

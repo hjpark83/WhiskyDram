@@ -12,6 +12,7 @@ import {
 } from "@/lib/ai/popup-research";
 import { getAdminUser } from "@/lib/auth/admin";
 import { createClient } from "@/lib/supabase/server";
+import { BOTTLE_PHOTO_BUCKET } from "@/lib/whisky/photos";
 
 export type AdminState = { error?: string; message?: string } | null;
 
@@ -370,6 +371,52 @@ export async function removeReport(formData: FormData): Promise<void> {
   revalidatePath("/admin/prices");
   revalidatePath("/price");
   if (whiskyId) revalidatePath(`/price/${whiskyId}`);
+}
+
+// ---------------------------------------------------------------------------
+// 병 사진 (사용자가 스캔하며 올린 실물 사진)
+//   승인 전에는 올린 본인에게만 보여요. 여기서 확인한 것만 모두에게 공개돼요.
+// ---------------------------------------------------------------------------
+
+export async function approvePhoto(formData: FormData): Promise<void> {
+  const admin = await getAdminUser();
+  if (!admin) return;
+
+  const id = String(formData.get("id") ?? "");
+  const whiskyId = String(formData.get("whiskyId") ?? "");
+  if (!id) return;
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("whisky_photos").update({ approved: true }).eq("id", id);
+  if (error) {
+    console.warn(`[admin] 사진 승인 실패 (${error.code ?? "?"}): ${error.message}`);
+    return;
+  }
+
+  revalidatePath("/admin/photos");
+  if (whiskyId) revalidatePath(`/whisky/${whiskyId}`);
+}
+
+export async function rejectPhoto(formData: FormData): Promise<void> {
+  const admin = await getAdminUser();
+  if (!admin) return;
+
+  const id = String(formData.get("id") ?? "");
+  const whiskyId = String(formData.get("whiskyId") ?? "");
+  const path = String(formData.get("path") ?? "");
+  if (!id) return;
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("whisky_photos").delete().eq("id", id);
+  if (error) {
+    console.warn(`[admin] 사진 삭제 실패 (${error.code ?? "?"}): ${error.message}`);
+    return;
+  }
+  // 표에서 지웠으면 파일도 지워요 (주인 없는 파일이 남지 않게)
+  if (path) await supabase.storage.from(BOTTLE_PHOTO_BUCKET).remove([path]);
+
+  revalidatePath("/admin/photos");
+  if (whiskyId) revalidatePath(`/whisky/${whiskyId}`);
 }
 
 // ---------------------------------------------------------------------------

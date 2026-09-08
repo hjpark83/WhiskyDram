@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FlavorBars } from "@/components/whisky/taste-bars";
-import { BottleArt } from "@/components/whisky/bottle-art";
+import { BottlePhotos } from "@/components/whisky/bottle-photos";
 import { LiquidSwatch } from "@/components/whisky/liquid-swatch";
 import { GlossaryText } from "@/components/whisky/term";
 import { MatchBadge, WhiskyCard } from "@/components/whisky/whisky-card";
@@ -15,6 +15,7 @@ import { PopupStatusBadge } from "@/components/popup/popup-card";
 import { formatPeriod, popupStatus, statusNote } from "@/lib/popup/format";
 import { listPopups } from "@/lib/popup/store";
 import { createClient } from "@/lib/supabase/server";
+import { getWhiskyPhotos } from "@/lib/whisky/photos";
 import {
   DIFFICULTY_LABELS_KO,
   formatAge,
@@ -62,6 +63,9 @@ export default async function WhiskyDetailPage({ params }: PageProps<"/whisky/[i
   }
   const percent = profile ? matchPercent(profile, w) : null;
   const similar = similarByFlavor(w, 3);
+
+  // 사용자가 스캔하며 올린 실물 사진 (없으면 병 그림으로 보여줘요)
+  const photos = await getWhiskyPhotos(supabase, w.id, user?.id ?? null);
 
   // 이 병을 맛볼 수 있는, 아직 끝나지 않은 팝업
   const popups = (await listPopups()).filter(
@@ -121,13 +125,16 @@ export default async function WhiskyDetailPage({ params }: PageProps<"/whisky/[i
               {STYLE_EMOJI[tag]} {STYLE_LABELS_KO[tag]}
             </Badge>
           ))}
+          {w.limited && (
+            <Badge variant="outline" className="border-amber-400/40 text-amber-200/90">
+              한정판 · 구하기 어려워요
+            </Badge>
+          )}
           <MatchBadge percent={percent} />
         </div>
         <div className="flex items-center gap-4">
-          {/* 병 그림. 실물 사진이 아니라 숙성·통 종류로 계산한 색이에요 */}
-          <div className="h-32 w-14 shrink-0">
-            <BottleArt whisky={w} />
-          </div>
+          {/* 누군가 스캔하며 올린 실물 사진. 없으면 숙성·통 종류로 색을 계산한 병 그림 */}
+          <BottlePhotos whisky={w} photos={photos} />
           <div className="min-w-0">
             <h1 className="text-3xl font-bold">{w.nameKo}</h1>
             <p className="text-muted-foreground">{w.name}</p>

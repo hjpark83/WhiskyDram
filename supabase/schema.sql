@@ -454,6 +454,91 @@ create policy "admin_emails: admin writes"
   on public.admin_emails for all using (public.is_admin()) with check (public.is_admin());
 
 -- ---------------------------------------------------------------------------
+-- whisky_photos: 사용자가 찍은 실물 병 사진
+--
+--   판매 사이트 제품 이미지는 수입사·유통사 자산이라 가져다 쓸 수 없어요.
+--   대신 사용자가 직접 찍은 사진은 그 사람 것이라, 스캔할 때 올린 사진을
+--   그 병의 사진으로 쌓아요.
+--
+--   공개는 사람이 확인한 뒤에 해요 (approved). 남이 볼 화면에 올라가는
+--   사진이라, AI 가 찾아온 정보와 같은 원칙을 지켜요. 다만 **올린 본인은
+--   승인 전에도 자기 사진을 봐요** — 방금 올렸는데 안 보이면 고장 같으니까요.
+-- ---------------------------------------------------------------------------
+create table if not exists public.whisky_photos (
+  id uuid primary key default gen_random_uuid(),
+  whisky_id text not null,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  -- Storage 의 bottle-photos 버킷 안 경로
+  storage_path text not null unique,
+  -- scan = 병 스캔에서 자동으로, upload = 직접 올림
+  source text not null default 'scan' check (source in ('scan', 'upload')),
+  approved boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists whisky_photos_whisky_idx
+  on public.whisky_photos (whisky_id, approved, created_at desc);
+create index if not exists whisky_photos_pending_idx
+  on public.whisky_photos (approved, created_at desc);
+
+alter table public.whisky_photos enable row level security;
+
+-- 승인된 사진은 누구나, 승인 전 사진은 올린 본인과 관리자만.
+drop policy if exists "whisky_photos: approved or own" on public.whisky_photos;
+create policy "whisky_photos: approved or own"
+  on public.whisky_photos for select
+  using (approved or user_id = auth.uid() or public.is_admin());
+
+drop policy if exists "whisky_photos: owner inserts" on public.whisky_photos;
+create policy "whisky_photos: owner inserts"
+  on public.whisky_photos for insert
+  to authenticated
+  with check (user_id = auth.uid());
+
+-- 승인은 관리자만. 본인이 approved 를 켜지 못하게 update 권한을 안 줘요.
+drop policy if exists "whisky_photos: admin updates" on public.whisky_photos;
+create policy "whisky_photos: admin updates"
+  on public.whisky_photos for update
+  using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "whisky_photos: owner or admin deletes" on public.whisky_photos;
+create policy "whisky_photos: owner or admin deletes"
+  on public.whisky_photos for delete
+  using (user_id = auth.uid() or public.is_admin());
+
+-- ---------------------------------------------------------------------------
+-- Storage: bottle-photos 버킷
+--   경로 규칙은 "<user_id>/<whisky_id>/<uuid>.jpg" 예요. 정책이 첫 칸을
+--   사용자 id 로 확인하니, 남의 폴더에는 못 올려요.
+-- ---------------------------------------------------------------------------
+insert into storage.buckets (id, name, public)
+values ('bottle-photos', 'bottle-photos', true)
+on conflict (id) do update set public = true;
+
+drop policy if exists "bottle-photos: public read" on storage.objects;
+create policy "bottle-photos: public read"
+  on storage.objects for select
+  using (bucket_id = 'bottle-photos');
+
+drop policy if exists "bottle-photos: owner uploads" on storage.objects;
+create policy "bottle-photos: owner uploads"
+  on storage.objects for insert
+  to authenticated
+  with check (
+    bucket_id = 'bottle-photos'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists "bottle-photos: owner or admin deletes" on storage.objects;
+create policy "bottle-photos: owner or admin deletes"
+  on storage.objects for delete
+  to authenticated
+  using (
+    bucket_id = 'bottle-photos'
+    and ((storage.foldername(name))[1] = auth.uid()::text or public.is_admin())
+  );
+
+-- ---------------------------------------------------------------------------
 -- 관리자 지정 (여기만 본인 것으로 바꿔서 실행하세요)
 -- ---------------------------------------------------------------------------
 -- 1) 이 이메일로 가입하면 자동으로 관리자가 돼요 (다시 가입하거나 계정을 옮길 때 대비).

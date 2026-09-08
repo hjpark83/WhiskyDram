@@ -5,6 +5,7 @@ import { getWhisky } from "@/data/whiskies";
 import { scanBottle, type ScanPayload } from "@/lib/ai/scan";
 import { createClient } from "@/lib/supabase/server";
 import { formatPriceRange, TYPE_SHORT_KO } from "@/lib/whisky/format";
+import { bytesFromBase64, saveBottlePhoto } from "@/lib/whisky/photos";
 import { hasProfile } from "@/lib/whisky/recommend";
 import { EMPTY_TASTE_PROFILE, type TasteProfile, type Whisky } from "@/lib/whisky/types";
 
@@ -89,6 +90,19 @@ export async function submitScan(raw: z.infer<typeof inputSchema>): Promise<Scan
       payload: result,
     });
     if (error) console.error("[scan] insert failed", error);
+
+    // 방금 찍은 사진을 그 병의 실물 사진으로 쌓아요. 확신이 없는 인식으로
+    // 엉뚱한 병에 사진을 붙이면 안 되니, 확신도가 높을 때만 저장해요.
+    // 저장에 실패해도 스캔 결과는 그대로 보여줘요.
+    if (result.confidence === "high") {
+      await saveBottlePhoto(supabase, {
+        userId: user.id,
+        whiskyId: whisky.id,
+        bytes: bytesFromBase64(parsed.data.imageBase64),
+        mediaType: parsed.data.mediaType,
+        source: "scan",
+      });
+    }
   }
 
   return {

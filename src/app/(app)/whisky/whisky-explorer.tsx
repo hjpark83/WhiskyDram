@@ -19,7 +19,7 @@ import {
 import { hasProfile, matchPercent } from "@/lib/whisky/recommend";
 import type { Origin, StyleTag, TasteProfile, Whisky, WhiskyType } from "@/lib/whisky/types";
 
-type SortKey = "match" | "price_asc" | "price_desc" | "easy";
+type SortKey = "match" | "price_asc" | "price_desc" | "easy" | "age_desc";
 
 const TYPE_ORDER: WhiskyType[] = [
   "single_malt",
@@ -38,6 +38,24 @@ const PRICE_BUCKETS: { id: string; label: string; max: number | null }[] = [
   { id: "20", label: "20만 원 이하", max: 200000 },
 ];
 
+/**
+ * 숙성 연수. 위스키 가격은 연수를 따라가서, "12년짜리로 보여줘" 가
+ * 실제로 제일 많이 쓰는 조건이에요.
+ * 연수를 안 적는 병(NAS)은 숫자가 없으니 따로 골라야 해요.
+ */
+const AGE_BUCKETS: {
+  id: string;
+  label: string;
+  match: (age: number | null) => boolean;
+}[] = [
+  { id: "all", label: "전체", match: () => true },
+  { id: "nas", label: "연수 표기 없음", match: (a) => a === null },
+  { id: "u10", label: "10년 미만", match: (a) => a !== null && a < 10 },
+  { id: "10s", label: "10~14년", match: (a) => a !== null && a >= 10 && a < 15 },
+  { id: "15s", label: "15~19년", match: (a) => a !== null && a >= 15 && a < 20 },
+  { id: "20+", label: "20년 이상", match: (a) => a !== null && a >= 20 },
+];
+
 export function WhiskyExplorer({
   whiskies,
   profile,
@@ -51,6 +69,8 @@ export function WhiskyExplorer({
   const [type, setType] = useState<WhiskyType | "all">("all");
   const [styles, setStyles] = useState<StyleTag[]>([]);
   const [price, setPrice] = useState("all");
+  const [age, setAge] = useState("all");
+  const [distillery, setDistillery] = useState("all");
   const [sort, setSort] = useState<SortKey>(personalized ? "match" : "easy");
 
   // 원산지를 고르면 그 안에 실제로 있는 종류만 칩으로 보여줘요.
@@ -60,6 +80,20 @@ export function WhiskyExplorer({
     return TYPE_ORDER.filter((t) => set.has(t));
   }, [whiskies, origin]);
 
+  /**
+   * 증류소 목록. 500병이 넘어 전부 칩으로 깔면 화면을 덮어서 <select> 로 두고,
+   * 지금 걸린 나라·종류 안에 실제로 있는 증류소만 병 수와 함께 보여줘요.
+   */
+  const distilleries = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const w of whiskies) {
+      if (origin !== "all" && getOrigin(w) !== origin) continue;
+      if (type !== "all" && w.type !== type) continue;
+      counts.set(w.distillery, (counts.get(w.distillery) ?? 0) + 1);
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  }, [whiskies, origin, type]);
+
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     const maxPrice = PRICE_BUCKETS.find((b) => b.id === price)?.max ?? null;
@@ -68,6 +102,8 @@ export function WhiskyExplorer({
       .filter((w) => type === "all" || w.type === type)
       .filter((w) => styles.every((s) => w.styles.includes(s)))
       .filter((w) => maxPrice === null || w.priceKrw[0] <= maxPrice)
+      .filter((w) => (AGE_BUCKETS.find((b) => b.id === age) ?? AGE_BUCKETS[0]).match(w.age))
+      .filter((w) => distillery === "all" || w.distillery === distillery)
       .filter((w) => {
         if (!q) return true;
         const hay = [w.nameKo, w.name, w.distillery, ...(w.aliases ?? [])]
@@ -88,6 +124,9 @@ export function WhiskyExplorer({
           return a.whisky.priceKrw[0] - b.whisky.priceKrw[0];
         case "price_desc":
           return b.whisky.priceKrw[0] - a.whisky.priceKrw[0];
+        case "age_desc":
+          // 연수를 안 적는 병은 비교할 숫자가 없어서 뒤로 보내요
+          return (b.whisky.age ?? -1) - (a.whisky.age ?? -1);
         case "easy":
         default:
           return (
@@ -97,16 +136,23 @@ export function WhiskyExplorer({
       }
     });
     return list;
-  }, [whiskies, query, origin, type, styles, price, sort, personalized, profile]);
+  }, [whiskies, query, origin, type, styles, price, age, distillery, sort, personalized, profile]);
 
   const activeCount =
-    (origin !== "all" ? 1 : 0) + (type !== "all" ? 1 : 0) + styles.length + (price !== "all" ? 1 : 0);
+    (origin !== "all" ? 1 : 0) +
+    (type !== "all" ? 1 : 0) +
+    styles.length +
+    (price !== "all" ? 1 : 0) +
+    (age !== "all" ? 1 : 0) +
+    (distillery !== "all" ? 1 : 0);
 
   function reset() {
     setOrigin("all");
     setType("all");
     setStyles([]);
     setPrice("all");
+    setAge("all");
+    setDistillery("all");
     setQuery("");
   }
 
@@ -142,6 +188,7 @@ export function WhiskyExplorer({
               onClick={() => {
                 setOrigin(o);
                 setType("all");
+                setDistillery("all");
               }}
             >
               {ORIGIN_LABELS_KO[o]}
@@ -154,7 +201,14 @@ export function WhiskyExplorer({
             전체
           </Chip>
           {typesInOrigin.map((t) => (
-            <Chip key={t} active={type === t} onClick={() => setType(t)}>
+            <Chip
+              key={t}
+              active={type === t}
+              onClick={() => {
+                setType(t);
+                setDistillery("all");
+              }}
+            >
               {TYPE_SHORT_KO[t]}
             </Chip>
           ))}
@@ -183,6 +237,30 @@ export function WhiskyExplorer({
           ))}
         </FilterRow>
 
+        <FilterRow label="숙성 연수" hint="숫자가 클수록 오래 익힌 술이에요. 보통 가격도 같이 올라가요.">
+          {AGE_BUCKETS.map((b) => (
+            <Chip key={b.id} active={age === b.id} onClick={() => setAge(b.id)}>
+              {b.label}
+            </Chip>
+          ))}
+        </FilterRow>
+
+        <FilterRow label="증류소" hint="위스키를 만든 곳이에요. 같은 곳에서 여러 병이 나와요.">
+          <select
+            value={distillery}
+            onChange={(e) => setDistillery(e.target.value)}
+            className="h-8 max-w-full rounded-md border bg-background px-2 text-sm"
+            aria-label="증류소로 거르기"
+          >
+            <option value="all">전체 ({distilleries.length}곳)</option>
+            {distilleries.map(([name, count]) => (
+              <option key={name} value={name}>
+                {name} ({count})
+              </option>
+            ))}
+          </select>
+        </FilterRow>
+
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground">{results.length}병</span>
@@ -208,6 +286,7 @@ export function WhiskyExplorer({
               <option value="easy">입문하기 쉬운 순</option>
               <option value="price_asc">가격 낮은 순</option>
               <option value="price_desc">가격 높은 순</option>
+              <option value="age_desc">숙성 연수 긴 순</option>
             </select>
           </label>
         </div>

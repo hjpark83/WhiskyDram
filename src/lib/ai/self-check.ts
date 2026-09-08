@@ -25,7 +25,9 @@ import { scanBottle } from "@/lib/ai/scan";
 import { per700, summarize } from "@/lib/price/stats";
 import type { PriceReport } from "@/lib/price/types";
 import { rankWhiskies } from "@/lib/whisky/recommend";
-import { EMPTY_TASTE_PROFILE, type TasteProfile } from "@/lib/whisky/types";
+import { analyzeTaste } from "@/lib/ai/taste";
+import { QUIZ_QUESTIONS } from "@/data/quiz";
+import { EMPTY_TASTE_PROFILE, TASTE_AXES, type TasteProfile } from "@/lib/whisky/types";
 
 /** 점검용 가짜 취향 (단맛·과일 쪽으로 살짝 기울인 초보) */
 const PROFILE: TasteProfile = { ...EMPTY_TASTE_PROFILE, sweet: 2, fruit: 1, peat: -1, body: 1 };
@@ -34,7 +36,15 @@ const PROFILE: TasteProfile = { ...EMPTY_TASTE_PROFILE, sweet: 2, fruit: 1, peat
 const TINY_PNG =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
 
-export type CheckId = "persona" | "quiz" | "journal" | "scan" | "chat" | "price" | "popup";
+export type CheckId =
+  | "persona"
+  | "taste"
+  | "quiz"
+  | "journal"
+  | "scan"
+  | "chat"
+  | "price"
+  | "popup";
 
 export interface CheckMeta {
   id: CheckId;
@@ -45,6 +55,11 @@ export interface CheckMeta {
 
 const ALL_CHECKS: CheckMeta[] = [
   { id: "persona", name: "개인정보 취급", what: "성별이 프롬프트에 안 들어가는지 (AI 호출 없음)" },
+  {
+    id: "taste",
+    name: "AI 취향 분석",
+    what: "답변을 읽고 취향 벡터를 직접 만드는지 · 싫다는 답을 뒤집지 않는지",
+  },
   { id: "quiz", name: "취향 진단 추천", what: "구조화 JSON · 정해진 개수(3병) · 사전에 있는 id" },
   { id: "journal", name: "후기 분석", what: "구조화 JSON · 취향 축 갱신" },
   { id: "scan", name: "병 사진 스캔", what: "이미지 입력(비전) · 구조화 JSON" },
@@ -126,6 +141,40 @@ async function checkPersona(): Promise<Outcome> {
     return no("나이대 단정 금지 문구가 빠졌어요", "나이대만 넣고 경고를 빼면 고정관념이 생겨요.");
   }
   return ok(`상황·좋아함·피함은 들어가고 성별은 빠졌어요 (${text.split("\n").length - 1}줄)`);
+}
+
+/**
+ * AI 취향 분석.
+ *
+ * 제일 중요한 건 **싫다고 답한 걸 AI 가 뒤집지 못하는지**예요. "연기 냄새는
+ * 싫어요" 를 고른 답변을 넣고, 결과가 그래도 음수인지 봐요. 여기가 뚫리면
+ * 규칙 쪽에서 고쳐놓은 걸 AI 가 되돌려버려요.
+ */
+async function checkTaste(): Promise<Outcome> {
+  const answers = Object.fromEntries(
+    QUIZ_QUESTIONS.map((q) => [q.id, q.options[0].id]),
+  ) as Record<string, string>;
+  answers.smoke = "hate"; // 연기 냄새는 싫어요
+
+  const result = await analyzeTaste(answers, {
+    ageBand: "30s",
+    gender: null,
+    scenes: ["alone"],
+    likes: "바닐라, 꿀 같은 단 향",
+    avoids: "소독약 냄새",
+  });
+
+  if (result.generatedBy !== "ai") return no("AI 응답이 아니라 폴백이에요", FALLBACK_HINT);
+  if (!result.summary.trim()) return no("분석 요약이 비었어요", "summary 필드를 확인해주세요.");
+
+  if (result.profile.peat > -1) {
+    return no(
+      `"연기 냄새는 싫어요" 라고 답했는데 피트가 ${result.profile.peat} 로 나왔어요`,
+      "직접 물어본 답(decisive)이 AI 결과에 적용되는지 analyzeTaste() 를 확인해주세요.",
+    );
+  }
+  const axes = TASTE_AXES.map((a) => `${a} ${result.profile[a]}`).join(", ");
+  return ok(`피트 ${result.profile.peat} 로 거부가 유지됐어요 (${axes})`);
 }
 
 async function checkQuiz(): Promise<Outcome> {
@@ -267,6 +316,7 @@ async function checkPopup(): Promise<Outcome> {
 
 const RUNNERS: Record<CheckId, () => Promise<Outcome>> = {
   persona: checkPersona,
+  taste: checkTaste,
   quiz: checkQuiz,
   journal: checkJournal,
   scan: checkScan,
