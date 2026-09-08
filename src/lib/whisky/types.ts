@@ -91,6 +91,14 @@ export interface Whisky {
   flavor: FlavorProfile;
   notes: { nose: string; palate: string; finish: string }; // 초보자 언어
   beginnerTip: string; // "이런 분께 좋아요 / 이런 점은 주의"
+  /**
+   * 이 브랜드·병에 얽힌 이야기 (선택).
+   *
+   * 종류·숙성·통 설명은 가진 데이터로 자동으로 만들지만 (`explain.ts`),
+   * "왜 유명한지" 같은 건 사실 확인이 필요해서 **사람이 적은 것만** 넣어요.
+   * 비어 있으면 화면에 아예 안 나와요 — 지어낸 이야기를 채우느니 없는 게 나아요.
+   */
+  story?: string;
   pairings: string[]; // 안주·음식
   location: { lat: number; lng: number } | null;
   aliases?: string[]; // 라벨 인식 매칭용 (e.g. "Glenmorangie The Original")

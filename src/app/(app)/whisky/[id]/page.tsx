@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FlavorBars } from "@/components/whisky/taste-bars";
 import { BottlePhotos } from "@/components/whisky/bottle-photos";
 import { BuyLinks } from "@/components/whisky/buy-links";
+import { WhiskyExplainer } from "@/components/whisky/whisky-explainer";
 import { LiquidSwatch } from "@/components/whisky/liquid-swatch";
 import { GlossaryText } from "@/components/whisky/term";
 import { MatchBadge, WhiskyCard } from "@/components/whisky/whisky-card";
@@ -174,6 +175,8 @@ export default async function WhiskyDetailPage({ params }: PageProps<"/whisky/[i
           </div>
         </dl>
       </header>
+
+      <WhiskyExplainer whisky={w} />
 
       <section className="grid gap-4 md:grid-cols-2">
         <Card>
