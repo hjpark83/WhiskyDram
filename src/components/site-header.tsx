@@ -46,23 +46,30 @@ export function SiteHeader({
   email,
   displayName,
   isAdmin = false,
+  signedIn = true,
 }: {
   email: string | null;
   displayName?: string | null;
   isAdmin?: boolean;
+  /**
+   * 로그인 안 한 사람도 위스키 이야기는 읽을 수 있어요. 그때 나머지 메뉴를
+   * 그대로 보여주면 눌러도 로그인 화면으로 튕겨서, 읽을 수 있는 것만 남겨요.
+   */
+  signedIn?: boolean;
 }) {
   const pathname = usePathname();
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
+  const items = signedIn ? nav : nav.filter((item) => item.href === "/posts");
 
   return (
     <>
       <header className="sticky top-0 z-40 bg-background/85 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-4">
-          <Link href="/home" className="brand shrink-0 text-lg font-bold text-amber-300">
+          <Link href={signedIn ? "/home" : "/"} className="brand shrink-0 text-lg font-bold text-amber-300">
             <BrandMark />
           </Link>
           <nav className="no-scrollbar hidden min-w-0 gap-0.5 overflow-x-auto sm:flex">
-            {nav.map((item) => (
+            {items.map((item) => (
               <Button
                 key={item.href}
                 variant="ghost"
@@ -99,17 +106,24 @@ export function SiteHeader({
                 {displayName || email}
               </Link>
             )}
-            <form action="/auth/signout" method="post">
-              <Button type="submit" variant="outline" size="sm">
-                로그아웃
+            {signedIn ? (
+              <form action="/auth/signout" method="post">
+                <Button type="submit" variant="outline" size="sm">
+                  로그아웃
+                </Button>
+              </form>
+            ) : (
+              <Button size="sm" render={<Link href="/login" />}>
+                로그인
               </Button>
-            </form>
+            )}
           </div>
         </div>
         <div className="brass-line" />
       </header>
 
-      {/* 모바일 하단 탭바 */}
+      {/* 모바일 하단 탭바 — 전부 로그인이 필요한 화면이라 로그인했을 때만 */}
+      {signedIn && (
       <nav
         className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur sm:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
@@ -137,6 +151,7 @@ export function SiteHeader({
           })}
         </ul>
       </nav>
+      )}
     </>
   );
 }

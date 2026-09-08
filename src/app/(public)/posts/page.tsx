@@ -15,6 +15,8 @@ export default async function PostsPage() {
     data: { user },
   } = await supabase.auth.getUser();
   const posts = await listPosts(supabase, { viewerId: user?.id ?? null, limit: 40 });
+  // 로그인 안 해도 읽을 수 있어요. 쓰기만 로그인이 필요해서 버튼 문구를 바꿔요.
+  const writeHref = user ? "/posts/new" : "/login?next=/posts/new";
 
   return (
     <div className="space-y-6">
@@ -23,11 +25,12 @@ export default async function PostsPage() {
           <h1 className="text-2xl font-bold">위스키 이야기</h1>
           <p className="mt-1 text-muted-foreground">
             마셔본 이야기를 편하게 남기는 곳이에요. 어려운 용어 없이 써도 괜찮아요.
+            {!user && " 읽는 건 로그인 없이도 돼요."}
           </p>
         </div>
-        <Button size="sm" render={<Link href="/posts/new" />}>
+        <Button size="sm" render={<Link href={writeHref} />}>
           <PenLine className="size-4" aria-hidden />
-          글 쓰기
+          {user ? "글 쓰기" : "로그인하고 글 쓰기"}
         </Button>
       </section>
 
@@ -38,8 +41,8 @@ export default async function PostsPage() {
             <p className="text-sm text-muted-foreground">
               첫 글을 남겨주세요. 별점도 병 선택도 안 해도 괜찮아요.
             </p>
-            <Button size="sm" variant="outline" render={<Link href="/posts/new" />}>
-              첫 글 쓰기
+            <Button size="sm" variant="outline" render={<Link href={writeHref} />}>
+              {user ? "첫 글 쓰기" : "로그인하고 첫 글 쓰기"}
             </Button>
           </CardContent>
         </Card>
