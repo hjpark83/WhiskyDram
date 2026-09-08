@@ -1,3 +1,5 @@
+import { FEATURES } from "@/data/features";
+import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { activeProvider } from "@/lib/ai/provider";
 import { suggestedBrands } from "@/lib/ai/popup-research";
@@ -9,6 +11,9 @@ export const metadata: Metadata = { title: "AI로 팝업 찾기" };
 export const maxDuration = 60;
 
 export default function DiscoverPopupsPage() {
+  // 팝업 스토어는 잠시 꺼둔 기능이에요 (src/data/features.ts)
+  if (!FEATURES.popup) notFound();
+
   const provider = activeProvider();
 
   return (

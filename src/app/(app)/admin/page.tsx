@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Database, Plus, Sparkles, Store, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { FEATURES } from "@/data/features";
 import { WHISKIES } from "@/data/whiskies";
 import { activeProvider } from "@/lib/ai/provider";
 import { popupStatus } from "@/lib/popup/format";
@@ -12,7 +13,8 @@ import { importSeedPopups } from "./actions";
 export const metadata: Metadata = { title: "관리자" };
 
 export default async function AdminDashboardPage() {
-  const popups = await listPopups({ includeUnpublished: true });
+  // 꺼져 있으면 DB를 건드리지 않아요
+  const popups = FEATURES.popup ? await listPopups({ includeUnpublished: true }) : [];
   const fromSeed = popups.every((p) => p.source === "seed");
   const ongoing = popups.filter((p) => popupStatus(p) === "ongoing").length;
   const upcoming = popups.filter((p) => popupStatus(p) === "upcoming").length;
@@ -20,12 +22,15 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Stat label="등록된 팝업" value={fromSeed ? 0 : popups.length} note={fromSeed ? "예시 데이터만 표시 중" : undefined} />
-        <Stat label="진행 중" value={ongoing} />
-        <Stat label="오픈 예정" value={upcoming} />
-      </div>
+      {FEATURES.popup && (
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Stat label="등록된 팝업" value={fromSeed ? 0 : popups.length} note={fromSeed ? "예시 데이터만 표시 중" : undefined} />
+          <Stat label="진행 중" value={ongoing} />
+          <Stat label="오픈 예정" value={upcoming} />
+        </div>
+      )}
 
+      {FEATURES.popup && (
       <Card>
         <CardContent className="space-y-3 p-5">
           <div className="flex items-center gap-2 text-amber-100">
@@ -49,6 +54,7 @@ export default async function AdminDashboardPage() {
           </div>
         </CardContent>
       </Card>
+      )}
 
       <Card>
         <CardContent className="space-y-3 p-5">
@@ -67,7 +73,7 @@ export default async function AdminDashboardPage() {
         </CardContent>
       </Card>
 
-      {fromSeed && (
+      {FEATURES.popup && fromSeed && (
         <Card>
           <CardContent className="space-y-3 p-5">
             <div className="flex items-center gap-2 text-amber-100">

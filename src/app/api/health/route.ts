@@ -10,6 +10,54 @@ import { createClient, hasSupabaseConfig } from "@/lib/supabase/server";
  * admins 표에 행이 있어도 **다른 계정으로 로그인**해 있으면 소용이 없는데,
  * 화면만 봐서는 그걸 구분할 수가 없었어요.
  */
+/**
+ * schema.sql 을 돌렸는지 확인해요.
+ *
+ * "저장이 안 돼요" 의 상당수가 사실 **새 표·칸이 아직 DB에 없는 것**인데,
+ * 화면만 봐서는 그걸 알 수가 없었어요. 각 표를 0줄만 조회해보고 오류 코드로 판단해요
+ * (42P01 = 그런 표 없음, 42703 = 그런 칸 없음).
+ */
+async function schemaReady() {
+  if (!hasSupabaseConfig()) return null;
+  try {
+    const supabase = await createClient();
+    const probe = async (table: string, columns: string) => {
+      const { error } = await supabase.from(table).select(columns).limit(0);
+      if (!error) return true;
+      if (error.code === "42P01" || error.code === "42703") return false;
+      // 권한 문제 등은 "없다" 와 다르니 그대로 알려줘요
+      return `${error.code ?? "?"}: ${error.message}`;
+    };
+
+    const [profilesPersona, priceReports, popupStores, admins] = await Promise.all([
+      probe("profiles", "age_band, drink_scenes, likes_note"),
+      probe("price_reports", "id"),
+      probe("popup_stores", "id"),
+      probe("admins", "user_id"),
+    ]);
+
+    const missing = [
+      profilesPersona === false && "profiles 의 내 정보 칸 (age_band 등)",
+      priceReports === false && "price_reports 표 (위스키 시세)",
+      popupStores === false && "popup_stores 표 (팝업 스토어)",
+      admins === false && "admins 표 (관리자)",
+    ].filter(Boolean);
+
+    return {
+      profilesPersona,
+      priceReports,
+      popupStores,
+      admins,
+      hint:
+        missing.length > 0
+          ? `아직 없는 것: ${missing.join(", ")} — supabase/schema.sql 을 Supabase SQL Editor 에서 실행해주세요 (여러 번 돌려도 안전해요).`
+          : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function whoami() {
   if (!hasSupabaseConfig()) return { loggedIn: false, reason: "Supabase 설정이 없어요" };
   try {
@@ -57,6 +105,7 @@ export async function GET() {
   return NextResponse.json({
     ok: true,
     you: await whoami(),
+    db: await schemaReady(),
     deployment: {
       // 지금 이 화면이 어느 커밋인지 — 최신 main 과 다르면 옛 배포를 보고 있는 거예요
       commit: sha ? sha.slice(0, 7) : null,

@@ -5,6 +5,10 @@
  * 다 다른 값이 되어 시세가 안 모여요. 그래서 큰 분류는 고르게 하고, 지점은
  * 따로 적게 해요.
  *
+ * 개별 매장 이름(예: 특정 주류샵)은 넣지 않아요. 한 곳만 이름을 박으면 그 가게
+ * 홍보처럼 보이고, 다른 지역 사람은 고를 게 없어요. 전국 체인만 이름을 쓰고
+ * 나머지는 **유형**(대형마트 · 리쿼샵 · 동네 마트)으로 묶어요.
+ *
  * 온라인 링크가 없는 이유: 한국은 주류 통신판매가 원칙적으로 금지라
  * 마트·매장이 위스키 가격을 웹에 올리지 않아요. 그래서 이어줄 페이지가 없어요.
  */
@@ -33,22 +37,43 @@ export const STORES: Store[] = [
     hint: "회원제 창고형. 1L 병이 많아서 용량을 꼭 확인해주세요.",
   },
   {
-    id: "joyang",
-    label: "조양마트",
-    kind: "bottle_shop",
-    hint: "서울 후암동. 애호가들이 많이 찾는 주류 전문점이에요.",
+    id: "mart",
+    label: "대형마트",
+    kind: "mart",
+    hint: "이마트·홈플러스·롯데마트 등. 지점 이름은 아래 칸에 적어주세요.",
   },
-  { id: "emart", label: "이마트", kind: "mart" },
-  { id: "homeplus", label: "홈플러스", kind: "mart" },
-  { id: "lotte_mart", label: "롯데마트", kind: "mart" },
-  { id: "bottle_shop", label: "동네 주류샵", kind: "bottle_shop" },
+  {
+    id: "liquor_shop",
+    label: "주류 전문점 (리쿼샵)",
+    kind: "bottle_shop",
+    hint: "위스키를 전문으로 파는 곳. 종류가 많고 시세 폭이 커요.",
+  },
+  {
+    id: "local_mart",
+    label: "동네 마트·슈퍼",
+    kind: "mart",
+    hint: "가게마다 가격이 제각각이라 지점 이름을 적어주시면 도움이 돼요.",
+  },
   { id: "duty_free", label: "면세점", kind: "duty_free", hint: "입국장·기내 포함" },
   { id: "other", label: "그 외", kind: "other" },
 ];
 
-export const STORE_LABELS_KO: Record<string, string> = Object.fromEntries(
-  STORES.map((s) => [s.id, s.label]),
-);
+/**
+ * 예전에 쓰던 매장 id. 이미 올라온 제보가 이름 없이 뜨지 않게 남겨둬요.
+ * 새 제보에서는 고를 수 없어요 (STORES 에 없으니까요).
+ */
+const LEGACY_STORE_LABELS: Record<string, string> = {
+  joyang: "주류 전문점 (리쿼샵)",
+  emart: "대형마트",
+  homeplus: "대형마트",
+  lotte_mart: "대형마트",
+  bottle_shop: "주류 전문점 (리쿼샵)",
+};
+
+export const STORE_LABELS_KO: Record<string, string> = {
+  ...LEGACY_STORE_LABELS,
+  ...Object.fromEntries(STORES.map((s) => [s.id, s.label])),
+};
 
 export function getStore(id: string): Store | undefined {
   return STORES.find((s) => s.id === id);

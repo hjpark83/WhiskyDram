@@ -10,6 +10,7 @@
  * 툴 스트리밍). 그래서 "키가 있다" 만으로는 부족하고 이렇게 다 불러봐야 해요.
  */
 
+import { FEATURES } from "@/data/features";
 import { GENDER_LABELS_KO, type Persona } from "@/data/persona";
 import { WHISKIES } from "@/data/whiskies";
 import { personaText } from "@/lib/ai/persona";
@@ -42,7 +43,7 @@ export interface CheckMeta {
   what: string;
 }
 
-export const CHECKS: CheckMeta[] = [
+const ALL_CHECKS: CheckMeta[] = [
   { id: "persona", name: "개인정보 취급", what: "성별이 프롬프트에 안 들어가는지 (AI 호출 없음)" },
   { id: "quiz", name: "취향 진단 추천", what: "구조화 JSON · 정해진 개수(3병) · 사전에 있는 id" },
   { id: "journal", name: "후기 분석", what: "구조화 JSON · 취향 축 갱신" },
@@ -51,6 +52,11 @@ export const CHECKS: CheckMeta[] = [
   { id: "price", name: "시세 판정", what: "구조화 JSON · 제보 숫자를 읽고 판정" },
   { id: "popup", name: "팝업 웹 검색", what: "검색 그라운딩 + 초안 추출 (2번 호출, 조금 느려요)" },
 ];
+
+/** 꺼둔 기능은 점검도 안 해요 (src/data/features.ts) */
+export const CHECKS: CheckMeta[] = ALL_CHECKS.filter(
+  (c) => c.id !== "popup" || FEATURES.popup,
+);
 
 export interface CheckResult extends CheckMeta {
   ok: boolean;

@@ -21,7 +21,7 @@ export default async function PricePage() {
       <header className="space-y-3">
         <h1 className="text-3xl text-amber-100">위스키 시세</h1>
         <p className="text-sm leading-relaxed text-amber-50/85">
-          트레이더스·코스트코·조양마트에서 <strong>실제로 본 가격</strong>을 서로 알려주는 곳이에요. 용량이
+          트레이더스·코스트코·대형마트·리쿼샵에서 <strong>실제로 본 가격</strong>을 서로 알려주는 곳이에요. 용량이
           달라도 비교할 수 있게 700ml 기준으로 환산해서 보여줘요.
         </p>
       </header>
