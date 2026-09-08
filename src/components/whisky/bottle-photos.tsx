@@ -1,13 +1,17 @@
 import Image from "next/image";
-import { BottleArt } from "@/components/whisky/bottle-art";
+import { BottleArt3D } from "@/components/whisky/bottle-art-3d";
 import type { WhiskyPhoto } from "@/lib/whisky/photos";
 import type { Whisky } from "@/lib/whisky/types";
 
 /**
- * 실물 병 사진. 없으면 그려둔 병 그림으로 대신해요.
+ * 실물 병 사진. 없으면 입체 병 그림으로 대신해요.
  *
  * 사진은 사용자가 병을 스캔할 때 올린 것이에요. 판매 사이트 제품 이미지를
  * 못 쓰는 대신, 실제로 그 병을 산 사람이 찍은 사진이 쌓이는 구조예요.
+ *
+ * **사진이 있으면 사진이 우선이에요.** 3D 는 잘 만들어도 실물이 아니라서,
+ * "이 병이 그 병인가" 를 확인하는 데는 사진을 이길 수 없어요. 3D 는 사진이
+ * 아직 없는 병에서 액체 색과 병 모양을 보여주는 역할이에요.
  */
 export function BottlePhotos({
   whisky,
@@ -19,11 +23,7 @@ export function BottlePhotos({
   const cover = photos[0];
 
   if (!cover) {
-    return (
-      <div className="h-32 w-14 shrink-0">
-        <BottleArt whisky={whisky} />
-      </div>
-    );
+    return <BottleArt3D whisky={whisky} size={176} className="shrink-0" />;
   }
 
   return (
