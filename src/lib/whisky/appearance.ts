@@ -73,17 +73,26 @@ function hex(r: number, g: number, b: number): string {
 }
 
 /**
- * 라벨 **위쪽** 띠에서 액체 색을 뽑아요.
+ * 액체 색 뽑기.
  *
- * 위스키 병은 라벨 위가 술로 차 있는 게 보통이라 거기가 제일 안전해요.
+ * ## 한쪽만 보면 안 돼요
  *
- * 처음엔 라벨 글자 높이를 기준으로 조금만 위를 봤는데, **라벨 크림색이 그대로
- * 뽑혔어요.** 스캔이 주는 좌표는 라벨 전체가 아니라 *글자*라서, 글자 높이만큼
- * 올라가도 아직 라벨 안이거든요. 그래서 **라벨 폭**(≈ 병 폭)을 기준으로 훨씬
- * 위를 봐요.
+ * 처음엔 라벨 **위**를 봤어요. 라벨이 병 위쪽에 붙어 있으면 거기가 술이 아니라
+ * **마개**라 나무 갈색이 뽑혔어요. 그래서 라벨 **아래**를 먼저 보게 바꿨더니,
+ * 이번엔 라벨이 병 아래쪽에 있을 때 **병 밑동과 배경**이 뽑혔어요.
  *
- * 밝은 반사와 어두운 그림자는 빼고, 채도가 있는 픽셀만 모아 **중앙값**을 써요.
- * 평균을 쓰면 흰 반사 한 점에 색이 끌려가요.
+ * 위도 아래도 항상 안전하지 않아요. 그래서 **여러 자리를 다 재보고 그중 가장
+ * 술 같은 것**을 고르게 했어요.
+ *
+ * ## "가장 술 같은" 의 기준
+ *
+ *  - **라벨 색과 비슷하면 탈락.** 라벨 안쪽 색을 직접 재서 비교해요.
+ *  - **넓고 채도가 높을수록 높은 점수.** 술은 병 안을 크게 채우고 색이 진해요.
+ *    배경(대리석·벽)은 얼룩덜룩해서 조건을 통과하는 픽셀이 적고 채도도 낮아요.
+ *  - 반사(너무 밝음)·그림자(너무 어두움)·무채색은 애초에 세지 않아요.
+ *  - 파랑이 빨강보다 진한 픽셀도 빼요. 위스키는 호박색이니까요.
+ *
+ * 색은 평균이 아니라 **중앙값**이에요. 평균은 흰 반사 한 점에 끌려가요.
  */
 function sampleLiquid(
   ctx: CanvasRenderingContext2D,
@@ -92,44 +101,77 @@ function sampleLiquid(
   box: { ymin: number; xmin: number; ymax: number; xmax: number },
 ): string | null {
   const px = (v: number, size: number) => Math.round((v / SCALE) * size);
-  const left = px(box.xmin, w);
-  const right = px(box.xmax, w);
+  const labelLeft = px(box.xmin, w);
+  const labelRight = px(box.xmax, w);
   const labelTop = px(box.ymin, h);
-  const labelW = right - left;
+  const labelBottom = px(box.ymax, h);
+  const labelW = labelRight - labelLeft;
   if (labelW < 8) return null;
 
-  const mid = (arr: number[]) => arr.sort((a, b) => a - b)[Math.floor(arr.length / 2)];
+  // 유리 가장자리(어두운 테두리)를 피해 안쪽만
+  const left = labelLeft + Math.round(labelW * 0.12);
+  const right = labelRight - Math.round(labelW * 0.12);
+  if (right - left < 4) return null;
 
-  // 라벨 폭의 0.5~1.6배 위를 보되, 못 찾으면 조금씩 더 올라가요
-  for (const [lo, hi] of [
-    [0.5, 1.6],
-    [1.2, 2.4],
-    [0.15, 0.5],
-  ] as const) {
-    const bandBottom = labelTop - Math.round(labelW * lo);
-    const bandTop = labelTop - Math.round(labelW * hi);
-    const y0 = Math.max(0, bandTop);
-    const y1 = Math.min(h, bandBottom);
-    if (y1 - y0 < 4) continue;
+  const mid = (a: number[]) => a.sort((x, y) => x - y)[Math.floor(a.length / 2)];
 
-    const data = ctx.getImageData(left, y0, right - left, y1 - y0).data;
+  /** 한 띠를 재서 중앙값과 "얼마나 술 같은지" 를 돌려줘요 */
+  const read = (y0: number, y1: number, strict: boolean) => {
+    const a = Math.max(0, Math.min(h, y0));
+    const b = Math.max(0, Math.min(h, y1));
+    if (b - a < 4) return null;
+    const data = ctx.getImageData(left, a, right - left, b - a).data;
     const reds: number[] = [];
     const greens: number[] = [];
     const blues: number[] = [];
+    let sats = 0;
     for (let i = 0; i < data.length; i += 4) {
-      const [r, g, b] = [data[i], data[i + 1], data[i + 2]];
-      const { sat, lum } = satLum(r, g, b);
-      // 반사(너무 밝음)·그림자(너무 어두움)·무채색(유리·배경) 제외
-      if (lum > 0.9 || lum < 0.12 || sat < 0.18) continue;
-      // 위스키는 호박색이에요. 파랑이 빨강보다 진하면 술이 아니라 배경이에요.
-      if (b >= r) continue;
+      const [r, g, bl] = [data[i], data[i + 1], data[i + 2]];
+      const { sat, lum } = satLum(r, g, bl);
+      if (strict && (lum > 0.9 || lum < 0.12 || sat < 0.18 || bl >= r)) continue;
       reds.push(r);
       greens.push(g);
-      blues.push(b);
+      blues.push(bl);
+      sats += sat;
     }
-    if (reds.length >= 40) return hex(mid(reds), mid(greens), mid(blues));
+    if (reds.length < 40) return null;
+    const total = ((b - a) * (right - left)) || 1;
+    return {
+      hex: hex(mid(reds), mid(greens), mid(blues)),
+      rgb: [mid(reds), mid(greens), mid(blues)] as [number, number, number],
+      // 넓게 차지할수록 · 채도가 높을수록 술다워요
+      score: (reds.length / total) * (sats / reds.length),
+    };
+  };
+
+  // 라벨 자신의 색 (이것과 비슷하면 라벨을 잘못 잰 거예요)
+  const label = read(
+    labelTop + Math.round((labelBottom - labelTop) * 0.25),
+    labelTop + Math.round((labelBottom - labelTop) * 0.75),
+    false,
+  );
+
+  const bands: [number, number][] = [
+    // 라벨 위
+    [labelTop - Math.round(labelW * 1.6), labelTop - Math.round(labelW * 0.5)],
+    [labelTop - Math.round(labelW * 0.5), labelTop - Math.round(labelW * 0.15)],
+    // 라벨 아래
+    [labelBottom + Math.round(labelW * 0.15), labelBottom + Math.round(labelW * 0.6)],
+    [labelBottom + Math.round(labelW * 0.05), labelBottom + Math.round(labelW * 0.25)],
+  ];
+
+  let best: { hex: string; score: number } | null = null;
+  for (const [y0, y1] of bands) {
+    const got = read(y0, y1, true);
+    if (!got) continue;
+    // 라벨 색과 너무 비슷하면 라벨을 잰 거예요
+    if (label) {
+      const d = Math.hypot(...got.rgb.map((v, i) => v - label.rgb[i]));
+      if (d < 45) continue;
+    }
+    if (!best || got.score > best.score) best = { hex: got.hex, score: got.score };
   }
-  return null;
+  return best?.hex ?? null;
 }
 
 /** 라벨 영역을 잘라 가로로 긴 텍스처로 (3D 병에 감을 그림) */
