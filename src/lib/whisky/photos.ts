@@ -17,7 +17,7 @@ export const BOTTLE_PHOTO_BUCKET = "bottle-photos";
 export const MAX_PHOTO_BYTES = 3_000_000;
 
 const PHOTO_COLUMNS =
-  "id, whisky_id, user_id, storage_path, image_url, source, source_url, credit, license, approved, created_at";
+  "id, whisky_id, user_id, storage_path, image_url, source, source_url, credit, license, label_path, liquid_hex, approved, created_at";
 
 export interface WhiskyPhoto {
   id: string;
@@ -32,6 +32,10 @@ export interface WhiskyPhoto {
   sourceUrl: string | null;
   credit: string | null;
   license: string | null;
+  /** 사진에서 꺼낸 라벨 그림 — 3D 병에 감아요 */
+  labelUrl: string | null;
+  /** 사진에서 꺼낸 액체 색 (#rrggbb) */
+  liquidHex: string | null;
   createdAt: string;
 }
 
@@ -47,6 +51,8 @@ interface PhotoRow {
   source_url: string | null;
   credit: string | null;
   license: string | null;
+  label_path: string | null;
+  liquid_hex: string | null;
   approved: boolean;
   created_at: string;
 }
@@ -73,6 +79,10 @@ function toPhoto(
     sourceUrl: row.source_url,
     credit: row.credit,
     license: row.license,
+    labelUrl: row.label_path
+      ? supabase.storage.from(BOTTLE_PHOTO_BUCKET).getPublicUrl(row.label_path).data.publicUrl
+      : null,
+    liquidHex: row.liquid_hex,
     createdAt: row.created_at,
   };
 }
@@ -158,6 +168,8 @@ export async function saveBottlePhoto(
     source?: "scan" | "upload";
   },
 ): Promise<string | null> {
+  // 돌려주는 건 저장 경로가 아니라 **행 id** 예요. 스캔 직후에 라벨·색을
+  // 이어서 채워야 해서, 그때 어느 행인지 가리킬 수 있어야 하거든요.
   const ext = EXT[params.mediaType];
   if (!ext) return null;
   if (params.bytes.byteLength > MAX_PHOTO_BYTES) return null;
@@ -171,19 +183,23 @@ export async function saveBottlePhoto(
     return null;
   }
 
-  const { error } = await supabase.from("whisky_photos").insert({
-    whisky_id: params.whiskyId,
-    user_id: params.userId,
-    storage_path: path,
-    source: params.source ?? "scan",
-  });
-  if (error) {
+  const { data, error } = await supabase
+    .from("whisky_photos")
+    .insert({
+      whisky_id: params.whiskyId,
+      user_id: params.userId,
+      storage_path: path,
+      source: params.source ?? "scan",
+    })
+    .select("id")
+    .maybeSingle();
+  if (error || !data) {
     console.error("[photos] insert failed", error);
     // 표에 못 넣었으면 올린 파일도 지워요 (주인 없는 파일이 남지 않게)
     await supabase.storage.from(BOTTLE_PHOTO_BUCKET).remove([path]);
     return null;
   }
-  return path;
+  return data.id as string;
 }
 
 /** base64 → 바이트. 스캔은 이미 base64 로 이미지를 받고 있어요. */

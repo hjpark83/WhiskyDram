@@ -24,7 +24,18 @@ export function BottlePhotos({
   const cover = photos[0];
 
   if (!cover) {
-    return <BottleArt3D whisky={whisky} size={176} className="shrink-0" />;
+    // 사진이 아직 공개되지 않았어도, 거기서 꺼낸 라벨·색은 3D 에 쓸 수 있어요.
+    // 그래야 스캔 한 번이 바로 눈에 보이는 변화로 이어져요.
+    const seen = photos.find((p) => p.labelUrl || p.liquidHex);
+    return (
+      <BottleArt3D
+        whisky={whisky}
+        size={176}
+        className="shrink-0"
+        labelUrl={seen?.labelUrl}
+        liquidHex={seen?.liquidHex}
+      />
+    );
   }
 
   return (
