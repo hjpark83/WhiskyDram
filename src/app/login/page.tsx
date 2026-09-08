@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BRAND_MARK } from "@/data/brand";
+import { BrandMark } from "@/components/brand-mark";
 import type { Metadata } from "next";
 import {
   Card,
@@ -23,7 +23,7 @@ export default async function LoginPage(props: PageProps<"/login">) {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <Link href="/" className="mx-auto mb-2 text-2xl font-bold">
-            {BRAND_MARK}
+            <BrandMark />
           </Link>
           <CardTitle>시작하기</CardTitle>
           <CardDescription>

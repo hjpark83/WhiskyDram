@@ -317,6 +317,143 @@ create policy "price_reports: owner or admin deletes"
   using (auth.uid() = user_id or public.is_admin());
 
 -- ---------------------------------------------------------------------------
+-- 관리자용 조회
+-- ---------------------------------------------------------------------------
+-- RLS 때문에 관리자도 남의 profiles·notes 를 직접 읽을 수 없어요 (그게 맞아요 —
+-- 개인 기록이니까요). 그래서 **숫자만** 돌려주는 함수를 두고, 함수 안에서
+-- 관리자인지 확인해요. 개별 사용자의 취향이나 후기 내용은 여기서도 안 나와요.
+create or replace function public.admin_overview()
+returns jsonb
+language plpgsql
+stable
+security definer set search_path = public
+as $$
+declare
+  result jsonb;
+begin
+  if not public.is_admin() then
+    raise exception '관리자만 볼 수 있어요' using errcode = '42501';
+  end if;
+
+  select jsonb_build_object(
+    'users', (select count(*) from auth.users),
+    'usersNew7d', (select count(*) from auth.users where created_at > now() - interval '7 days'),
+    'profiles', (select count(*) from public.profiles),
+    'withTaste', (select count(*) from public.profiles where taste_profile <> '{}'::jsonb),
+    'withPersona', (select count(*) from public.profiles
+                    where age_band is not null
+                       or coalesce(array_length(drink_scenes, 1), 0) > 0
+                       or likes_note is not null
+                       or avoids_note is not null),
+    'notes', (select count(*) from public.tasting_notes),
+    'notes7d', (select count(*) from public.tasting_notes where created_at > now() - interval '7 days'),
+    'recommendations', (select count(*) from public.recommendations),
+    'priceReports', (select count(*) from public.price_reports),
+    'priceReports7d', (select count(*) from public.price_reports where created_at > now() - interval '7 days'),
+    'pricedWhiskies', (select count(distinct whisky_id) from public.price_reports),
+    'admins', (select count(*) from public.admins)
+  ) into result;
+
+  return result;
+end;
+$$;
+
+revoke all on function public.admin_overview() from public;
+grant execute on function public.admin_overview() to authenticated;
+
+-- 가장 많이 기록된 위스키 (관리자 화면의 "무엇이 인기 있나")
+create or replace function public.admin_top_whiskies(limit_count int default 10)
+returns table (whisky_id text, notes bigint, avg_rating numeric)
+language plpgsql
+stable
+security definer set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception '관리자만 볼 수 있어요' using errcode = '42501';
+  end if;
+
+  return query
+  select n.whisky_id, count(*) as notes, round(avg(n.rating), 1) as avg_rating
+  from public.tasting_notes n
+  group by n.whisky_id
+  order by count(*) desc, n.whisky_id
+  limit greatest(1, least(limit_count, 50));
+end;
+$$;
+
+revoke all on function public.admin_top_whiskies(int) from public;
+grant execute on function public.admin_top_whiskies(int) to authenticated;
+
+-- 관리자는 시세 제보 전체를 보고 지울 수 있어야 해요 (엉터리 제보 정리).
+-- 읽기는 이미 공개라 따로 정책이 필요 없고, 삭제 정책은 위에 있어요.
+
+-- 이미 가입한 계정을 관리자로 올리고 내리는 함수.
+-- auth.users 는 앱에서 직접 못 읽어서(그게 맞아요), 함수 안에서만 이메일을 찾아요.
+create or replace function public.admin_promote_email(target_email text)
+returns int
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  moved int;
+begin
+  if not public.is_admin() then
+    raise exception '관리자만 쓸 수 있어요' using errcode = '42501';
+  end if;
+
+  insert into public.admins (user_id)
+  select id from auth.users where lower(email) = lower(target_email)
+  on conflict (user_id) do nothing;
+
+  get diagnostics moved = row_count;
+  return moved;
+end;
+$$;
+
+create or replace function public.admin_revoke_email(target_email text)
+returns int
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  moved int;
+begin
+  if not public.is_admin() then
+    raise exception '관리자만 쓸 수 있어요' using errcode = '42501';
+  end if;
+
+  -- 자기 자신은 못 내려요 (관리자가 0명이 되면 아무도 못 들어가요)
+  delete from public.admins a
+  using auth.users u
+  where a.user_id = u.id
+    and lower(u.email) = lower(target_email)
+    and a.user_id <> auth.uid();
+
+  get diagnostics moved = row_count;
+  return moved;
+end;
+$$;
+
+revoke all on function public.admin_promote_email(text) from public;
+revoke all on function public.admin_revoke_email(text) from public;
+grant execute on function public.admin_promote_email(text) to authenticated;
+grant execute on function public.admin_revoke_email(text) to authenticated;
+
+-- 관리자 명단 관리: 관리자는 명단 전체를 보고 추가할 수 있어요.
+drop policy if exists "admins: admin reads all" on public.admins;
+create policy "admins: admin reads all"
+  on public.admins for select using (public.is_admin());
+
+drop policy if exists "admin_emails: admin reads" on public.admin_emails;
+create policy "admin_emails: admin reads"
+  on public.admin_emails for select using (public.is_admin());
+
+drop policy if exists "admin_emails: admin writes" on public.admin_emails;
+create policy "admin_emails: admin writes"
+  on public.admin_emails for all using (public.is_admin()) with check (public.is_admin());
+
+-- ---------------------------------------------------------------------------
 -- 관리자 지정 (여기만 본인 것으로 바꿔서 실행하세요)
 -- ---------------------------------------------------------------------------
 -- 1) 이 이메일로 가입하면 자동으로 관리자가 돼요 (다시 가입하거나 계정을 옮길 때 대비).

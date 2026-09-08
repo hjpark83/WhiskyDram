@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { WHISKIES } from "@/data/whiskies";
 import { useRef, useState, useTransition } from "react";
 import { AlertTriangle, Camera, GlassWater, ImagePlus, NotebookPen, RotateCcw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -137,7 +138,7 @@ export function ScanForm({ personalized }: { personalized: boolean }) {
           <div className="flex h-full min-h-[240px] flex-col items-center justify-center gap-3 text-center">
             <BottlingLoader
               done={phase === "done"}
-              lines={["라벨을 읽는 중…", `${312}병 사전에서 찾는 중…`, "취향과 맞춰보는 중…"]}
+              lines={["라벨을 읽는 중…", `${WHISKIES.length}병 사전에서 찾는 중…`, "취향과 맞춰보는 중…"]}
               onComplete={() => {
                 setRevealed(outcome);
                 setPhase("idle");
@@ -274,7 +275,7 @@ export function ScanForm({ personalized }: { personalized: boolean }) {
                 <p className="text-xs text-muted-foreground">읽은 글자: {revealed.result.readText}</p>
               )}
               <p className="text-sm text-muted-foreground">
-                사전에는 {"국내에서 구할 수 있는 병 위주로"} 312병이 있어요. 비슷한 병을 검색해보거나,
+                사전에는 {"국내에서 구할 수 있는 병 위주로"} {WHISKIES.length}병이 있어요. 비슷한 병을 검색해보거나,
                 다른 각도에서 다시 찍어보세요.
               </p>
               <div className="flex gap-2">

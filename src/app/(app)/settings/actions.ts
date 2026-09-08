@@ -7,14 +7,20 @@ import { createClient } from "@/lib/supabase/server";
 
 export type SettingsState = { error?: string; message?: string } | null;
 
-/** 저장이 왜 실패했는지 사용자가 할 수 있는 말로 옮겨요 */
-function saveErrorMessage(code: string | undefined): string {
+/**
+ * 저장이 왜 실패했는지 사용자가 할 수 있는 말로 옮겨요.
+ *
+ * 코드를 괄호에 같이 붙여요. 화면 한 장만 보내주면 원인이 바로 잡히거든요 —
+ * "저장이 안 돼요" 만으로는 DB 문제인지 권한 문제인지 구분이 안 돼요.
+ */
+function saveErrorMessage(code: string | undefined, detail?: string): string {
+  const tail = code ? ` (${code})` : "";
   // 42703 = 그런 칸 없음, 42P01 = 그런 표 없음 → 스키마를 아직 안 돌린 거예요
   if (code === "42703" || code === "42P01") {
-    return "DB에 아직 새 칸이 없어요. supabase/schema.sql 을 Supabase SQL Editor 에서 실행해주세요.";
+    return `DB에 아직 새 칸이 없어요${tail}. supabase/schema.sql 을 Supabase SQL Editor 에서 실행해주세요.`;
   }
-  if (code === "42501") return "권한이 없어요. 로그인을 다시 해보세요.";
-  return "저장하지 못했어요. 잠시 후 다시 시도해주세요.";
+  if (code === "42501") return `권한이 없어요${tail}. 로그인을 다시 해보세요.`;
+  return `저장하지 못했어요${tail}. ${detail ?? "잠시 후 다시 시도해주세요."}`;
 }
 
 /** 닉네임 바꾸기. 사이트 전체에서 이 이름으로 불러요. */
@@ -41,7 +47,7 @@ export async function updateNickname(
     .maybeSingle();
   if (error) {
     console.warn(`[settings] 닉네임 저장 실패 (${error.code ?? "?"}): ${error.message}`);
-    return { error: saveErrorMessage(error.code) };
+    return { error: saveErrorMessage(error.code, error.message) };
   }
   if (!data) {
     return { error: "저장된 줄이 없어요. 로그인을 다시 해보고, 그래도 안 되면 알려주세요." };
@@ -101,7 +107,7 @@ export async function updatePersona(
 
   if (error) {
     console.warn(`[settings] 내 정보 저장 실패 (${error.code ?? "?"}): ${error.message}`);
-    return { error: saveErrorMessage(error.code) };
+    return { error: saveErrorMessage(error.code, error.message) };
   }
   if (!data) {
     return { error: "저장된 줄이 없어요. 로그인을 다시 해보고, 그래도 안 되면 알려주세요." };

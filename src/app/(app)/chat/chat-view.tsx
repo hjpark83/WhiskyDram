@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { WHISKIES } from "@/data/whiskies";
 import { useEffect, useRef, useState } from "react";
 import { Bot, Send, Sparkles, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -230,7 +231,7 @@ export function ChatView({ personalized, greeting }: { personalized: boolean; gr
           </Button>
         </form>
         <p className="mt-2 text-[11px] text-muted-foreground">
-          사전에 있는 312병 안에서만 추천해요. 대화는 저장되지 않아요.
+          사전에 있는 {WHISKIES.length}병 안에서만 추천해요. 대화는 저장되지 않아요.
         </p>
       </div>
     </div>

@@ -5,6 +5,8 @@ import { requireAdmin } from "@/lib/auth/admin";
 
 const TABS = [
   { href: "/admin", label: "대시보드" },
+  { href: "/admin/prices", label: "시세 제보" },
+  { href: "/admin/admins", label: "관리자" },
   { href: "/admin/ai", label: "AI 점검" },
 ];
 

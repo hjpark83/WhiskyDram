@@ -346,3 +346,84 @@ export async function saveDrafts(_prev: SaveDraftsState, formData: FormData): Pr
     message: `${rows.length}개를 비공개 초안으로 저장했어요. 목록에서 내용을 확인하고 공개해주세요.`,
   };
 }
+
+// ---------------------------------------------------------------------------
+// 시세 제보 관리
+// ---------------------------------------------------------------------------
+
+/** 엉터리 제보 지우기. 지울 권한은 RLS 로 막혀 있어요 (본인 것이거나 관리자). */
+export async function removeReport(formData: FormData): Promise<void> {
+  const admin = await getAdminUser();
+  if (!admin) return;
+
+  const id = String(formData.get("id") ?? "");
+  const whiskyId = String(formData.get("whiskyId") ?? "");
+  if (!id) return;
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("price_reports").delete().eq("id", id);
+  if (error) {
+    console.warn(`[admin] 제보 삭제 실패 (${error.code ?? "?"}): ${error.message}`);
+    return;
+  }
+
+  revalidatePath("/admin/prices");
+  revalidatePath("/price");
+  if (whiskyId) revalidatePath(`/price/${whiskyId}`);
+}
+
+// ---------------------------------------------------------------------------
+// 관리자 명단
+// ---------------------------------------------------------------------------
+
+/**
+ * 관리자 추가.
+ *
+ * 명단(admin_emails)에 넣고, **이미 가입한 계정이면 그 자리에서** 올려줘요.
+ * 명단만 넣으면 다음 가입 때부터 적용돼서, 이미 있는 계정은 아무 일도 안 일어나요.
+ */
+export async function addAdminEmail(formData: FormData): Promise<void> {
+  const admin = await getAdminUser();
+  if (!admin) return;
+
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const note = String(formData.get("note") ?? "").trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("admin_emails")
+    .upsert({ email, note: note || null }, { onConflict: "email" });
+  if (error) {
+    console.warn(`[admin] 명단 추가 실패 (${error.code ?? "?"}): ${error.message}`);
+    return;
+  }
+
+  // 이미 가입한 계정이면 지금 바로 올려요 (auth.users 는 직접 못 읽어서 함수를 써요)
+  const { error: promoteError } = await supabase.rpc("admin_promote_email", { target_email: email });
+  if (promoteError) {
+    console.warn(`[admin] 즉시 승격 실패 (${promoteError.code ?? "?"}): ${promoteError.message}`);
+  }
+
+  revalidatePath("/admin/admins");
+}
+
+/** 명단에서 빼기. 이미 붙은 권한도 같이 거둬요. */
+export async function removeAdminEmail(formData: FormData): Promise<void> {
+  const admin = await getAdminUser();
+  if (!admin) return;
+
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (!email) return;
+  // 자기 자신은 못 빼요 — 관리자가 0명이 되면 아무도 못 들어가요
+  if (email === (admin.email ?? "").toLowerCase()) return;
+
+  const supabase = await createClient();
+  await supabase.from("admin_emails").delete().eq("email", email);
+  const { error } = await supabase.rpc("admin_revoke_email", { target_email: email });
+  if (error) {
+    console.warn(`[admin] 권한 회수 실패 (${error.code ?? "?"}): ${error.message}`);
+  }
+
+  revalidatePath("/admin/admins");
+}
