@@ -539,6 +539,53 @@ create policy "bottle-photos: owner or admin deletes"
   );
 
 -- ---------------------------------------------------------------------------
+-- whisky_photos 확장: 위키미디어 커먼즈 사진
+--
+--   판매 사이트 제품 이미지는 못 쓰지만, 커먼즈에 올라온 사진 중에는
+--   자유 라이선스(CC BY / CC BY-SA / CC0 / 퍼블릭 도메인)라 **출처만 밝히면
+--   합법적으로 쓸 수 있는** 것들이 있어요.
+--
+--   대신 라이선스가 요구하는 것을 지켜야 해요: 출처 링크·촬영자·라이선스 이름을
+--   같이 저장하고 화면에도 같이 보여줘요. 그래서 칸을 따로 뒀어요.
+-- ---------------------------------------------------------------------------
+alter table public.whisky_photos add column if not exists image_url text;
+alter table public.whisky_photos add column if not exists source_url text;
+alter table public.whisky_photos add column if not exists credit text;
+alter table public.whisky_photos add column if not exists license text;
+
+-- 커먼즈 사진은 우리 Storage 에 파일이 없어요 (주소만 가리켜요)
+alter table public.whisky_photos alter column storage_path drop not null;
+
+-- 사용자 사진은 storage_path, 커먼즈 사진은 image_url — 둘 중 하나는 반드시 있어야 해요
+alter table public.whisky_photos drop constraint if exists whisky_photos_has_image;
+alter table public.whisky_photos
+  add constraint whisky_photos_has_image
+  check (storage_path is not null or image_url is not null);
+
+alter table public.whisky_photos drop constraint if exists whisky_photos_source_check;
+alter table public.whisky_photos
+  add constraint whisky_photos_source_check
+  check (source in ('scan', 'upload', 'commons'));
+
+-- 커먼즈는 출처를 반드시 밝혀야 해요 (라이선스 조건)
+alter table public.whisky_photos drop constraint if exists whisky_photos_commons_credit;
+alter table public.whisky_photos
+  add constraint whisky_photos_commons_credit
+  check (source <> 'commons' or (source_url is not null and license is not null));
+
+-- 같은 사진을 두 번 붙이지 않게
+create unique index if not exists whisky_photos_image_url_idx
+  on public.whisky_photos (whisky_id, image_url) where image_url is not null;
+
+-- 커먼즈 사진은 관리자가 직접 고르는 거라 관리자만 넣을 수 있어요.
+-- (사용자 업로드는 기존 정책대로 본인 것만 넣어요.)
+drop policy if exists "whisky_photos: owner inserts" on public.whisky_photos;
+create policy "whisky_photos: owner inserts"
+  on public.whisky_photos for insert
+  to authenticated
+  with check (user_id = auth.uid() and (source <> 'commons' or public.is_admin()));
+
+-- ---------------------------------------------------------------------------
 -- posts / post_comments: 공개 후기 글과 댓글
 --
 --   tasting_notes 와 다른 것이에요. 노트는 **나만 보는 기록**이고 취향 벡터를

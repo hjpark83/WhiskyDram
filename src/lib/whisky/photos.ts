@@ -16,6 +16,9 @@ export const BOTTLE_PHOTO_BUCKET = "bottle-photos";
 /** 사진 한 장이 넘을 수 없는 크기 (원본 그대로 올리면 데이터가 아까워요) */
 export const MAX_PHOTO_BYTES = 3_000_000;
 
+const PHOTO_COLUMNS =
+  "id, whisky_id, user_id, storage_path, image_url, source, source_url, credit, license, approved, created_at";
+
 export interface WhiskyPhoto {
   id: string;
   whiskyId: string;
@@ -23,6 +26,12 @@ export interface WhiskyPhoto {
   approved: boolean;
   /** 내가 올린 사진인지 (승인 대기 안내를 보여주려고) */
   mine: boolean;
+  /** scan/upload = 사용자 사진, commons = 위키미디어 커먼즈 */
+  source: "scan" | "upload" | "commons";
+  /** 커먼즈 사진은 출처를 반드시 밝혀야 해요 (라이선스 조건) */
+  sourceUrl: string | null;
+  credit: string | null;
+  license: string | null;
   createdAt: string;
 }
 
@@ -30,9 +39,23 @@ interface PhotoRow {
   id: string;
   whisky_id: string;
   user_id: string;
-  storage_path: string;
+  /** 사용자가 올린 사진 (우리 Storage) */
+  storage_path: string | null;
+  /** 커먼즈처럼 바깥에 있는 사진 */
+  image_url: string | null;
+  source: WhiskyPhoto["source"];
+  source_url: string | null;
+  credit: string | null;
+  license: string | null;
   approved: boolean;
   created_at: string;
+}
+
+function publicUrl(supabase: SupabaseClient, row: PhotoRow): string {
+  // 커먼즈 사진은 주소를 그대로 가리켜요 (우리 Storage 에 파일이 없어요)
+  if (row.image_url) return row.image_url;
+  if (!row.storage_path) return "";
+  return supabase.storage.from(BOTTLE_PHOTO_BUCKET).getPublicUrl(row.storage_path).data.publicUrl;
 }
 
 function toPhoto(
@@ -40,13 +63,16 @@ function toPhoto(
   row: PhotoRow,
   viewerId: string | null,
 ): WhiskyPhoto {
-  const { data } = supabase.storage.from(BOTTLE_PHOTO_BUCKET).getPublicUrl(row.storage_path);
   return {
     id: row.id,
     whiskyId: row.whisky_id,
-    url: data.publicUrl,
+    url: publicUrl(supabase, row),
     approved: row.approved,
     mine: row.user_id === viewerId,
+    source: row.source ?? "scan",
+    sourceUrl: row.source_url,
+    credit: row.credit,
+    license: row.license,
     createdAt: row.created_at,
   };
 }
@@ -65,7 +91,7 @@ export async function getWhiskyPhotos(
 ): Promise<WhiskyPhoto[]> {
   const { data, error } = await supabase
     .from("whisky_photos")
-    .select("id, whisky_id, user_id, storage_path, approved, created_at")
+    .select(PHOTO_COLUMNS)
     .eq("whisky_id", whiskyId)
     .order("approved", { ascending: false })
     .order("created_at", { ascending: false })
@@ -76,7 +102,9 @@ export async function getWhiskyPhotos(
     if (error.code !== "42P01") console.error("[photos] select failed", error);
     return [];
   }
-  return (data ?? []).map((row) => toPhoto(supabase, row as PhotoRow, viewerId));
+  return (data ?? [])
+    .map((row) => toPhoto(supabase, row as unknown as PhotoRow, viewerId))
+    .filter((p) => p.url);
 }
 
 /** 여러 병의 대표 사진을 한 번에 (목록 화면용) */
@@ -89,7 +117,7 @@ export async function getCoverPhotos(
 
   const { data, error } = await supabase
     .from("whisky_photos")
-    .select("whisky_id, storage_path, created_at")
+    .select("whisky_id, storage_path, image_url, created_at")
     .in("whisky_id", whiskyIds)
     .eq("approved", true)
     .order("created_at", { ascending: false });
@@ -99,11 +127,11 @@ export async function getCoverPhotos(
     return out;
   }
   for (const row of data ?? []) {
-    const r = row as { whisky_id: string; storage_path: string };
+    const r = row as unknown as PhotoRow;
     // 정렬이 최신순이라 처음 만난 게 대표 사진이에요
     if (out.has(r.whisky_id)) continue;
-    const { data: pub } = supabase.storage.from(BOTTLE_PHOTO_BUCKET).getPublicUrl(r.storage_path);
-    out.set(r.whisky_id, pub.publicUrl);
+    const url = publicUrl(supabase, r);
+    if (url) out.set(r.whisky_id, url);
   }
   return out;
 }

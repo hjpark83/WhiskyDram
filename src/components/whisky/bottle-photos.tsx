@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { BottleArt3D } from "@/components/whisky/bottle-art-3d";
+import { creditLine } from "@/lib/whisky/commons";
 import type { WhiskyPhoto } from "@/lib/whisky/photos";
 import type { Whisky } from "@/lib/whisky/types";
 
@@ -41,6 +42,23 @@ export function BottlePhotos({
       {!cover.approved && (
         // 본인만 보이는 상태예요. 안 알려주면 "왜 나만 보이지?" 하게 돼요.
         <p className="text-center text-[10px] text-muted-foreground">확인 대기 중</p>
+      )}
+      {cover.source === "commons" && (
+        // 출처 표기는 라이선스가 요구하는 조건이에요. 빼면 쓸 수 없어요.
+        <p className="max-w-24 text-center text-[10px] leading-tight text-muted-foreground">
+          {cover.sourceUrl ? (
+            <a
+              href={cover.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-amber-300 hover:underline"
+            >
+              {creditLine(cover)}
+            </a>
+          ) : (
+            creditLine(cover)
+          )}
+        </p>
       )}
       {photos.length > 1 && (
         <p className="text-center text-[10px] text-muted-foreground">사진 {photos.length}장</p>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { Check, Info, Trash2 } from "lucide-react";
+import { Check, Image as ImageIcon, Info, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getWhisky } from "@/data/whiskies";
@@ -39,6 +39,11 @@ export default async function AdminPhotosPage() {
           올린 본인에게만 보이고요.
         </p>
       </div>
+
+      <Button size="sm" variant="outline" render={<Link href="/admin/photos/commons" />}>
+        <ImageIcon className="size-4" aria-hidden />
+        커먼즈에서 사진 찾기
+      </Button>
 
       <div className="flex gap-2.5 rounded-xl border border-amber-400/25 bg-amber-500/5 p-4 text-sm">
         <Info className="mt-0.5 size-4 shrink-0 text-amber-300" aria-hidden />
