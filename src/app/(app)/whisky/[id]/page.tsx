@@ -124,7 +124,10 @@ export default async function WhiskyDetailPage({ params }: PageProps<"/whisky/[i
       <header className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="secondary">{ORIGIN_LABELS_KO[getOrigin(w)]}</Badge>
-          <Badge variant="secondary">{TYPE_LABELS_KO[w.type]}</Badge>
+          {/* 일본·아일랜드 위스키는 산지와 종류 이름이 같아서 "재패니즈" 가 두 번 떴어요 */}
+          {TYPE_LABELS_KO[w.type] !== ORIGIN_LABELS_KO[getOrigin(w)] && (
+            <Badge variant="secondary">{TYPE_LABELS_KO[w.type]}</Badge>
+          )}
           <Badge variant="outline">{DIFFICULTY_LABELS_KO[w.difficulty]}</Badge>
           {w.styles.map((tag) => (
             <Badge key={tag} className="bg-amber-500/15 text-amber-200">

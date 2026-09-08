@@ -445,11 +445,118 @@ export async function searchCommonsPhotos(
 
   // 영문 이름으로 찾아야 걸려요. 한글 이름으로는 커먼즈에 거의 없어요.
   const query = String(formData.get("query") ?? "").trim() || whisky.name;
-  const photos = await searchCommons(query);
+  const { photos, error } = await searchCommons(query);
+  if (error) return { error };
   if (photos.length === 0) {
     return { error: `"${query}" 로는 찾은 사진이 없어요. 검색어를 바꿔보세요.` };
   }
   return { whiskyId, query, photos };
+}
+
+// ---------------------------------------------------------------------------
+// 여러 병을 한 번에
+//
+//   504병을 한 병씩 붙이는 건 현실적으로 못 해요. 사진이 아직 없는 병들을
+//   모아 한 번에 찾아보고, 쓸 만한 후보를 골라 한꺼번에 붙이게 해요.
+//   그래도 **고르는 건 사람**이에요 — 자동으로 붙이지 않아요.
+// ---------------------------------------------------------------------------
+
+export interface BatchCandidate {
+  whiskyId: string;
+  whiskyLabel: string;
+  photo: CommonsPhoto | null;
+  /** 후보를 못 찾았으면 이유 */
+  note: string | null;
+}
+
+export type BatchState = { error: string } | { candidates: BatchCandidate[] } | null;
+
+/** 커먼즈에 한꺼번에 몰아치지 않게 몇 개씩 끊어서 */
+async function inChunks<T, R>(items: T[], size: number, fn: (item: T) => Promise<R>) {
+  const out: R[] = [];
+  for (let i = 0; i < items.length; i += size) {
+    out.push(...(await Promise.all(items.slice(i, i + size).map(fn))));
+  }
+  return out;
+}
+
+export async function findCommonsBatch(
+  _prev: BatchState,
+  formData: FormData,
+): Promise<BatchState> {
+  const admin = await getAdminUser();
+  if (!admin) return { error: "관리자만 쓸 수 있어요." };
+
+  const ids = String(formData.get("whiskyIds") ?? "")
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .slice(0, 12); // 커먼즈에 한 번에 너무 많이 묻지 않아요
+  if (ids.length === 0) return { error: "찾을 병이 없어요." };
+
+  let reachError: string | null = null;
+  const candidates = await inChunks(ids, 3, async (id): Promise<BatchCandidate> => {
+    const w = getWhisky(id);
+    if (!w) return { whiskyId: id, whiskyLabel: id, note: "사전에 없는 id", photo: null };
+    const label = `${w.nameKo} (${w.name})`;
+    const { photos, error } = await searchCommons(w.name, 6);
+    if (error) {
+      reachError = error;
+      return { whiskyId: id, whiskyLabel: label, note: error, photo: null };
+    }
+    const best = photos.find((p) => p.usable) ?? null;
+    return {
+      whiskyId: id,
+      whiskyLabel: label,
+      photo: best,
+      note: best ? null : "쓸 수 있는 라이선스의 사진이 없어요",
+    };
+  });
+
+  if (reachError && candidates.every((c) => !c.photo)) return { error: reachError };
+  return { candidates };
+}
+
+export async function attachCommonsBatch(
+  _prev: AttachState,
+  formData: FormData,
+): Promise<AttachState> {
+  const admin = await getAdminUser();
+  if (!admin) return { error: "관리자만 쓸 수 있어요." };
+
+  // 체크한 것만 붙여요. 값은 "whiskyId|imageUrl|sourceUrl|license|credit" 한 줄.
+  const picked = formData.getAll("pick").map(String).filter(Boolean);
+  if (picked.length === 0) return { error: "고른 사진이 없어요." };
+
+  const supabase = await createClient();
+  const rows = [];
+  for (const raw of picked) {
+    const [whiskyId, imageUrl, sourceUrl, license, credit = ""] = raw.split("|");
+    if (!getWhisky(whiskyId) || !imageUrl || !sourceUrl || !license) continue;
+    rows.push({
+      whisky_id: whiskyId,
+      user_id: admin.id,
+      image_url: imageUrl,
+      source: "commons",
+      source_url: sourceUrl,
+      credit: credit || null,
+      license,
+      approved: true,
+    });
+  }
+  if (rows.length === 0) return { error: "붙일 수 있는 사진이 없어요." };
+
+  const { error } = await supabase.from("whisky_photos").insert(rows);
+  if (error) {
+    if (error.code === "42703" || error.code === "42P01") {
+      return { error: "사진 표가 최신이 아니에요. supabase/schema.sql 을 다시 실행해주세요." };
+    }
+    return { error: `붙이지 못했어요 (${error.code ?? "?"}). ${error.message}` };
+  }
+
+  for (const r of rows) revalidatePath(`/whisky/${r.whisky_id}`);
+  revalidatePath("/admin/photos");
+  return { message: `${rows.length}장 붙였어요.` };
 }
 
 export type AttachState = { error?: string; message?: string } | null;

@@ -80,13 +80,21 @@ interface ApiPage {
   }[];
 }
 
+export interface CommonsResult {
+  photos: CommonsPhoto[];
+  /**
+   * 커먼즈에 못 닿았을 때만 채워져요.
+   * "찾은 사진이 없음" 과 "서버에 못 닿음" 은 완전히 다른 일인데, 둘 다 빈
+   * 목록으로 보이면 배포하고 나서 원인을 못 찾아요.
+   */
+  error: string | null;
+}
+
 /**
  * 병 이름으로 커먼즈를 검색해요.
- *
- * 실패해도 던지지 않고 빈 배열을 돌려줘요 — 사진을 못 찾은 것과 화면이
- * 깨지는 건 다른 일이니까요.
+ * 실패해도 던지지 않아요 — 사진을 못 찾은 것과 화면이 깨지는 건 다른 일이니까요.
  */
-export async function searchCommons(query: string, limit = 12): Promise<CommonsPhoto[]> {
+export async function searchCommons(query: string, limit = 12): Promise<CommonsResult> {
   const params = new URLSearchParams({
     action: "query",
     format: "json",
@@ -109,12 +117,13 @@ export async function searchCommons(query: string, limit = 12): Promise<CommonsP
     });
     if (!res.ok) {
       console.error(`[commons] 검색 실패 HTTP ${res.status}`);
-      return [];
+      return { photos: [], error: `커먼즈가 HTTP ${res.status} 를 돌려줬어요.` };
     }
     json = await res.json();
   } catch (error) {
     console.error("[commons] 검색 실패", error);
-    return [];
+    const detail = error instanceof Error ? error.message : String(error);
+    return { photos: [], error: `커먼즈에 닿지 못했어요: ${detail}` };
   }
 
   const pages = Object.values(json.query?.pages ?? {});
@@ -137,7 +146,8 @@ export async function searchCommons(query: string, limit = 12): Promise<CommonsP
     });
   }
   // 쓸 수 있는 것부터 보여줘요
-  return out.sort((a, b) => Number(b.usable) - Number(a.usable));
+  out.sort((a, b) => Number(b.usable) - Number(a.usable));
+  return { photos: out, error: null };
 }
 
 /** 출처 표기 한 줄 — 라이선스가 요구하는 최소한이에요 */
