@@ -52,24 +52,48 @@ const AXIS_SCALE: Record<TasteAxis, { pos: number; neg: number }> = (() => {
   return scale;
 })();
 
-export function profileFromAnswers(answers: QuizAnswers): TasteProfile {
-  const raw: TasteProfile = { ...EMPTY_TASTE_PROFILE };
-  /** 그 축을 직접 물어본 답이 있으면 마지막에 이 범위로 자릅니다 */
-  const bounds: Partial<Record<TasteAxis, { min?: number; max?: number }>> = {};
+export type AxisBounds = Partial<Record<TasteAxis, { min?: number; max?: number }>>;
 
+/**
+ * 그 축을 **직접** 물어본 답이 정한 범위.
+ *
+ * AI 취향 분석도 이 범위를 지켜야 해요. "연기 냄새는 싫어요" 라고 직접 답했는데
+ * AI 가 다른 답을 보고 피트를 +1 로 올려버리면 안 되니까요.
+ */
+export function decisiveBounds(answers: QuizAnswers): AxisBounds {
+  const bounds: AxisBounds = {};
   for (const q of QUIZ_QUESTIONS) {
-    const optionId = answers[q.id];
-    const option = q.options.find((o) => o.id === optionId);
-    if (!option) continue;
-    for (const [axis, d] of Object.entries(option.delta ?? {})) {
-      raw[axis as keyof TasteProfile] += d ?? 0;
-    }
-    for (const [axis, b] of Object.entries(option.decisive ?? {})) {
+    const option = q.options.find((o) => o.id === answers[q.id]);
+    for (const [axis, b] of Object.entries(option?.decisive ?? {})) {
       const prev = bounds[axis as TasteAxis] ?? {};
       bounds[axis as TasteAxis] = {
         min: b.min === undefined ? prev.min : Math.max(prev.min ?? -Infinity, b.min),
         max: b.max === undefined ? prev.max : Math.min(prev.max ?? Infinity, b.max),
       };
+    }
+  }
+  return bounds;
+}
+
+/** 직접 물어본 답이 정한 범위로 프로필을 잘라요 */
+export function applyBounds(profile: TasteProfile, bounds: AxisBounds): TasteProfile {
+  const out = { ...profile };
+  for (const axis of TASTE_AXES) {
+    const b = bounds[axis];
+    if (b?.max !== undefined) out[axis] = Math.min(out[axis], b.max);
+    if (b?.min !== undefined) out[axis] = Math.max(out[axis], b.min);
+  }
+  return clampProfile(out);
+}
+
+export function profileFromAnswers(answers: QuizAnswers): TasteProfile {
+  const raw: TasteProfile = { ...EMPTY_TASTE_PROFILE };
+  const bounds = decisiveBounds(answers);
+
+  for (const q of QUIZ_QUESTIONS) {
+    const option = q.options.find((o) => o.id === answers[q.id]);
+    for (const [axis, d] of Object.entries(option?.delta ?? {})) {
+      raw[axis as keyof TasteProfile] += d ?? 0;
     }
   }
 

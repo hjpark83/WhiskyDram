@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Database, Plus, Sparkles, Stethoscope, Store, Tag } from "lucide-react";
+import { Camera, Database, Plus, Sparkles, Stethoscope, Store, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FEATURES } from "@/data/features";
@@ -154,6 +154,22 @@ export default async function AdminDashboardPage() {
           </p>
           <Button size="sm" variant="outline" render={<Link href="/admin/prices" />}>
             제보 관리
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="space-y-3 p-5">
+          <div className="flex items-center gap-2 text-amber-100">
+            <Camera className="size-4 text-amber-400" aria-hidden />
+            <h2 className="text-lg">병 사진 확인</h2>
+          </div>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            사용자가 병을 스캔할 때 올린 실물 사진이에요. 병이 맞는지, 사람 얼굴이 안 찍혔는지만
+            보고 공개해요. 확인 전에는 올린 본인에게만 보여요.
+          </p>
+          <Button size="sm" variant="outline" render={<Link href="/admin/photos" />}>
+            사진 확인
           </Button>
         </CardContent>
       </Card>

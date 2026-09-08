@@ -51,6 +51,8 @@ export interface RecommendationPayload {
   model: string | null;
   /** 어떤 AI 로 만들었는지 (Claude / ChatGPT / Gemini). 폴백이면 null. */
   provider?: string | null;
+  /** 취향 벡터를 어떻게 만들었는지 (AI 분석 / 규칙 폴백) */
+  tasteAnalysis?: { summary: string; generatedBy: "ai" | "fallback" };
   basedOn?: RecommendationBasis;
 }
 
