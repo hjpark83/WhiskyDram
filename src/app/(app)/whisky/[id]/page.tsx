@@ -125,6 +125,11 @@ export default async function WhiskyDetailPage({ params }: PageProps<"/whisky/[i
               {STYLE_EMOJI[tag]} {STYLE_LABELS_KO[tag]}
             </Badge>
           ))}
+          {w.limited && (
+            <Badge variant="outline" className="border-amber-400/40 text-amber-200/90">
+              한정판 · 구하기 어려워요
+            </Badge>
+          )}
           <MatchBadge percent={percent} />
         </div>
         <div className="flex items-center gap-4">

@@ -228,6 +228,8 @@ export interface CandidateFilters {
   maxPriceKrw?: number | null;
   maxDifficulty?: 1 | 2 | 3 | 4 | 5;
   excludeIds?: string[];
+  /** 한정판(싱글 캐스크·품절)도 후보에 넣을지. 기본은 안 넣어요 — 살 수 없으니까요. */
+  includeLimited?: boolean;
 }
 
 export function filtersFromAnswers(answers: QuizAnswers): CandidateFilters {
@@ -253,8 +255,14 @@ export function rankWhiskies(
   limit = 8,
 ): ScoredWhisky[] {
   const excluded = new Set(filters.excludeIds ?? []);
-  // 싫다고 답한 향은 여기서 미리 빼요. 아래 완화 단계에서도 다시 들어오면 안 돼요.
-  const base = WHISKIES.filter((w) => !excluded.has(w.id) && !isAverted(profile, w));
+  // 싫다고 답한 향과 살 수 없는 한정판은 여기서 미리 빼요.
+  // 아래 완화 단계에서도 다시 들어오면 안 되니까 앞에서 걸러요.
+  const base = WHISKIES.filter(
+    (w) =>
+      !excluded.has(w.id) &&
+      !isAverted(profile, w) &&
+      (filters.includeLimited || !w.limited),
+  );
 
   const strict = base.filter((w) => {
     if (filters.maxPriceKrw && w.priceKrw[0] > filters.maxPriceKrw) return false;

@@ -9203,6 +9203,27 @@ export const WHISKIES: Whisky[] = [
     location: { lat: 47.9167, lng: -4.1500 }, aliases: ["Eddu Gold", "에뒤 골드"],
   },
   {
+    id: "version-francaise-la-roche-aux-fees-2020", name: "Version Francaise La Roche aux Fees 2020 Bourbon Cask",
+    nameKo: "베르시옹 프랑세즈 라 로슈 오 페 2020",
+    distillery: "La Roche aux Fees", region: "Other", country: "프랑스",
+    type: "single_malt", styles: ["bourbon_cask", "high_proof"], abv: 50, age: null,
+    priceKrw: [120000, 160000], difficulty: 4, limited: true,
+    flavor: { peat: 0, fruit: 3, sweet: 3, spice: 2, floral: 1, oak: 4, body: 4 },
+    notes: {
+      nose: "다크 초콜릿과 아몬드 시럽 같은 진한 단 향",
+      palate: "곡물 맛이 도톰하게 깔리고 건포도 같은 단맛이 따라와요. 50도라 묵직해요",
+      finish: "초콜릿과 나무 향이 길게 남아요",
+    },
+    beginnerTip: "브르타뉴의 작은 증류소를 라 메종 뒤 위스키가 통째로 사서 병입한 술이에요. 통 하나에서 129병만 나온 거라 지금은 구하기 어렵고, 국내 정식 수입도 없어요. 50도로 세서 첫 위스키로는 버거워요 — 물을 몇 방울 섞으면 향이 풀려요.",
+    pairings: ["다크 초콜릿", "말린 과일", "구운 견과류"],
+    location: { lat: 47.9014, lng: -1.3392 },
+    aliases: [
+      "Version Francaise La Roche aux Fees", "Version Française La Roche aux Fées",
+      "La Roche aux Fees 2020", "La Roche aux Fées 2020", "LA ROCHE AUX FEES",
+      "라 로슈 오 페", "VF La Roche aux Fees",
+    ],
+  },
+  {
     id: "version-francaise-le-malt", name: "Version Francaise Le Malt", nameKo: "베르시옹 프랑세즈 르 몰트",
     distillery: "Hepp", region: "Other", country: "프랑스",
     type: "single_malt", styles: ["bourbon_cask", "sherry", "wine_cask"], abv: 40, age: null,
@@ -9216,7 +9237,7 @@ export const WHISKIES: Whisky[] = [
     beginnerTip: "알자스 Hepp 증류소 몰트를 버번·바뉠스(프랑스 와인)·셰리 통 세 가지로 숙성해 섞었어요. 40도에 꽃·과일 향이라 프랑스 위스키 입문으로 좋아요. 500ml 병이에요.",
     pairings: ["사과 타르트", "부드러운 치즈", "견과류"],
     location: { lat: 48.8306, lng: 7.7139 },
-    aliases: ["Version Francaise Le Malt", "Version Française Le Malt", "VERSION FRANCAISE", "베르시옹 프랑세즈", "버전 프랑세즈"],
+    aliases: ["Version Francaise Le Malt", "Version Française Le Malt", "VERSION FRANCAISE", "VF Le Malt", "베르시옹 프랑세즈", "버전 프랑세즈"],
   },
   {
     id: "bellevoye-blanc", name: "Bellevoye Blanc", nameKo: "벨부아 블랑",

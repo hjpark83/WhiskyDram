@@ -94,6 +94,14 @@ export interface Whisky {
   pairings: string[]; // 안주·음식
   location: { lat: number; lng: number } | null;
   aliases?: string[]; // 라벨 인식 매칭용 (e.g. "Glenmorangie The Original")
+  /**
+   * 한정판 — 통 하나만 병입했거나(싱글 캐스크) 이미 다 팔린 병.
+   *
+   * 사전에는 남겨둬요. 스캔으로 알아보고, 마신 기록도 남겨야 하니까요.
+   * 다만 **추천에는 올리지 않아요** — 추천은 "이거 사보세요" 라는 말인데
+   * 살 수 없는 병을 권하면 안 되잖아요.
+   */
+  limited?: boolean;
 }
 
 export const EMPTY_TASTE_PROFILE: TasteProfile = {

@@ -55,6 +55,12 @@ export function WhiskyCard({
             <MatchBadge percent={percent} />
           </div>
           <div className="flex flex-wrap gap-1.5">
+            {whisky.limited && (
+              // 살 수 없는 병을 아무 표시 없이 섞어두면 헛걸음하게 돼요
+              <Badge variant="outline" className="border-amber-400/40 text-amber-200/90">
+                한정판 · 구하기 어려워요
+              </Badge>
+            )}
             <Badge variant="secondary">{TYPE_SHORT_KO[whisky.type]}</Badge>
             <Badge variant="outline">{formatOrigin(whisky)}</Badge>
             <Badge variant="outline">{DIFFICULTY_LABELS_KO[whisky.difficulty]}</Badge>
