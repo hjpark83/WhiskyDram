@@ -3,6 +3,7 @@ import {
   REGION_LABELS_KO,
   STYLE_LABELS_KO,
 } from "@/lib/whisky/format";
+import { DISTILLERY_STORIES } from "@/data/distillery-stories";
 import type { Region, StyleTag, Whisky, WhiskyType } from "@/lib/whisky/types";
 
 /**
@@ -17,8 +18,8 @@ import type { Region, StyleTag, Whisky, WhiskyType } from "@/lib/whisky/types";
  * (종류·산지·숙성 연수·통 종류·도수)에서 규칙으로 문장을 만들어요.
  * 지어내는 게 하나도 없어서 504병 전부에 안전하게 붙어요.
  *
- * 브랜드 이야기처럼 사실 확인이 필요한 내용은 `Whisky.story` 에 사람이
- * 적은 것만 보여줘요 (없으면 안 보여줘요).
+ * 브랜드 이야기처럼 사실 확인이 필요한 내용은 사람이 적은 것만 보여줘요
+ * (없으면 안 보여줘요). `storyFor()` 를 보세요.
  */
 
 // ---------------------------------------------------------------------------
@@ -191,4 +192,17 @@ export function explainWhisky(w: Whisky): ExplainBlock[] {
   });
 
   return blocks;
+}
+
+/**
+ * 보여줄 이야기.
+ *
+ * 브랜드 이야기는 그 증류소의 모든 병에 똑같이 해당해요. 글렌피딕 12년에 적은
+ * 글이 15년·18년에는 안 나오면 이상하죠. 그래서 **증류소 단위**로 한 번 적고
+ * 그 브랜드의 병 전부가 같이 써요.
+ *
+ * 그 병에만 해당하는 이야기가 따로 있으면 그쪽이 우선이에요.
+ */
+export function storyFor(w: Whisky): string | null {
+  return w.story ?? DISTILLERY_STORIES[w.distillery] ?? null;
 }

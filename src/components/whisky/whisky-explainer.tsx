@@ -1,6 +1,6 @@
 import { GlossaryText } from "@/components/whisky/term";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { explainWhisky, oneLiner } from "@/lib/whisky/explain";
+import { explainWhisky, oneLiner, storyFor } from "@/lib/whisky/explain";
 import type { Whisky } from "@/lib/whisky/types";
 
 /**
@@ -48,6 +48,7 @@ function Paragraphs({ text }: { text: string }) {
  */
 export function WhiskyExplainer({ whisky }: { whisky: Whisky }) {
   const blocks = explainWhisky(whisky);
+  const story = storyFor(whisky);
 
   return (
     <section className="space-y-4">
@@ -74,13 +75,15 @@ export function WhiskyExplainer({ whisky }: { whisky: Whisky }) {
       </Card>
 
       {/* 브랜드 이야기는 사실 확인이 필요해서 사람이 적은 것만 있어요 */}
-      {whisky.story && (
+      {story && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{whisky.nameKo} 이야기</CardTitle>
+            <CardTitle className="text-base">
+              {whisky.story ? whisky.nameKo : whisky.distillery} 이야기
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <Paragraphs text={whisky.story} />
+            <Paragraphs text={story} />
           </CardContent>
         </Card>
       )}
