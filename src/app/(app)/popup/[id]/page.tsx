@@ -1,3 +1,4 @@
+import { FEATURES } from "@/data/features";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -31,6 +32,9 @@ export async function generateMetadata({ params }: PageProps<"/popup/[id]">): Pr
 }
 
 export default async function PopupDetailPage({ params }: PageProps<"/popup/[id]">) {
+  // 팝업 스토어는 잠시 꺼둔 기능이에요 (src/data/features.ts)
+  if (!FEATURES.popup) notFound();
+
   const { id } = await params;
   const popup = await getPopup(id);
   if (!popup) notFound();

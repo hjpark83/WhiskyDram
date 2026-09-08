@@ -1,6 +1,6 @@
 @AGENTS.md
 
-# 취중진단 (醉中診斷) — project notes
+# Whiskipedia (위스키피디아) — project notes
 
 Hackathon entry (Wanted AI Challenge 2026, deadline 2026-09-20, solo). Ship over polish; keep to the priority order in README.md.
 

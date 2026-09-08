@@ -1,3 +1,5 @@
+import { FEATURES } from "@/data/features";
+import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { Info } from "lucide-react";
 import { listPopups } from "@/lib/popup/store";
@@ -6,6 +8,9 @@ import { PopupExplorer } from "./popup-explorer";
 export const metadata: Metadata = { title: "위스키 팝업 스토어" };
 
 export default async function PopupListPage() {
+  // 팝업 스토어는 잠시 꺼둔 기능이에요 (src/data/features.ts)
+  if (!FEATURES.popup) notFound();
+
   const popups = await listPopups();
   const allSample = popups.every((p) => p.source === "seed");
 
