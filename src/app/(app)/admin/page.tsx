@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Database, Plus, Sparkles, Store, Stethoscope } from "lucide-react";
+import { Database, Plus, Sparkles, Stethoscope, Store, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FEATURES } from "@/data/features";
-import { WHISKIES } from "@/data/whiskies";
+import { getOverview, getTopWhiskies } from "./stats";
+import { getWhisky, WHISKIES } from "@/data/whiskies";
 import { activeProvider } from "@/lib/ai/provider";
 import { popupStatus } from "@/lib/popup/format";
 import { listPopups } from "@/lib/popup/store";
@@ -19,9 +20,58 @@ export default async function AdminDashboardPage() {
   const ongoing = popups.filter((p) => popupStatus(p) === "ongoing").length;
   const upcoming = popups.filter((p) => popupStatus(p) === "upcoming").length;
   const aiProvider = activeProvider();
+  const [overview, topWhiskies] = await Promise.all([getOverview(), getTopWhiskies(8)]);
 
   return (
     <div className="space-y-6">
+      {overview ? (
+        <>
+          <section className="space-y-3">
+            <h2 className="text-lg text-amber-100">한눈에 보기</h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Stat label="가입자" value={overview.users} note={`최근 7일 +${overview.usersNew7d}`} />
+              <Stat label="취향 진단 완료" value={overview.withTaste} note={`내 정보까지 채운 사람 ${overview.withPersona}`} />
+              <Stat label="테이스팅 노트" value={overview.notes} note={`최근 7일 +${overview.notes7d}`} />
+              <Stat
+                label="시세 제보"
+                value={overview.priceReports}
+                note={`${overview.pricedWhiskies}병 · 최근 7일 +${overview.priceReports7d}`}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              개인 기록은 관리자도 못 봐요 (RLS). 여기 숫자는 집계만 돌려주는 함수에서 와요.
+            </p>
+          </section>
+
+          {topWhiskies.length > 0 && (
+            <Card>
+              <CardContent className="space-y-3 p-5">
+                <h2 className="text-lg text-amber-100">기록이 많은 위스키</h2>
+                <ol className="space-y-1 text-sm">
+                  {topWhiskies.map((t, i) => (
+                    <li key={t.whiskyId} className="flex items-center justify-between gap-2">
+                      <span className="min-w-0 truncate text-amber-50/90">
+                        <span className="mr-2 tabular-nums text-muted-foreground">{i + 1}</span>
+                        {getWhisky(t.whiskyId)?.nameKo ?? t.whiskyId}
+                      </span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        노트 {t.notes}개{t.avgRating !== null ? ` · 평균 ★${t.avgRating}` : ""}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      ) : (
+        <Card>
+          <CardContent className="p-5 text-sm text-amber-50/85">
+            통계를 읽지 못했어요. <code className="text-amber-300">supabase/schema.sql</code> 을 최신으로 한 번 더
+            실행해주세요 — 집계 함수(<code className="text-amber-300">admin_overview</code>)가 이번에 추가됐어요.
+          </CardContent>
+        </Card>
+      )}
       {FEATURES.popup && (
         <div className="grid gap-4 sm:grid-cols-3">
           <Stat label="등록된 팝업" value={fromSeed ? 0 : popups.length} note={fromSeed ? "예시 데이터만 표시 중" : undefined} />
@@ -92,6 +142,21 @@ export default async function AdminDashboardPage() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardContent className="space-y-3 p-5">
+          <div className="flex items-center gap-2 text-amber-100">
+            <Tag className="size-4 text-amber-400" aria-hidden />
+            <h2 className="text-lg">시세 제보</h2>
+          </div>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            사용자가 올린 시세를 보고, 명백히 잘못된 값만 지워요. 지우면 중간값이 바로 다시 계산돼요.
+          </p>
+          <Button size="sm" variant="outline" render={<Link href="/admin/prices" />}>
+            제보 관리
+          </Button>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent className="space-y-2 p-5">
