@@ -539,6 +539,102 @@ create policy "bottle-photos: owner or admin deletes"
   );
 
 -- ---------------------------------------------------------------------------
+-- posts / post_comments: 공개 후기 글과 댓글
+--
+--   tasting_notes 와 다른 것이에요. 노트는 **나만 보는 기록**이고 취향 벡터를
+--   갱신하는 데 써요. 여기 글은 **남에게 보여주는 글**이라 서로 섞지 않아요.
+--   같은 병에 대해 노트도 쓰고 글도 쓸 수 있어요.
+-- ---------------------------------------------------------------------------
+create table if not exists public.posts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  -- 특정 병에 대한 글이면 그 id (자유 주제 글이면 비워둬요)
+  whisky_id text,
+  title text not null,
+  body text not null,
+  -- 별점은 선택이에요. 후기가 아니라 "요즘 마신 것들" 같은 글도 있으니까요.
+  rating smallint check (rating between 1 and 5),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists posts_recent_idx on public.posts (created_at desc);
+create index if not exists posts_whisky_idx on public.posts (whisky_id, created_at desc);
+create index if not exists posts_author_idx on public.posts (user_id, created_at desc);
+
+alter table public.posts enable row level security;
+
+drop policy if exists "posts: everyone reads" on public.posts;
+create policy "posts: everyone reads" on public.posts for select using (true);
+
+drop policy if exists "posts: owner inserts" on public.posts;
+create policy "posts: owner inserts"
+  on public.posts for insert to authenticated with check (user_id = auth.uid());
+
+drop policy if exists "posts: owner updates" on public.posts;
+create policy "posts: owner updates"
+  on public.posts for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+drop policy if exists "posts: owner or admin deletes" on public.posts;
+create policy "posts: owner or admin deletes"
+  on public.posts for delete using (user_id = auth.uid() or public.is_admin());
+
+create table if not exists public.post_comments (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid not null references public.posts (id) on delete cascade,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  body text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists post_comments_post_idx
+  on public.post_comments (post_id, created_at);
+
+alter table public.post_comments enable row level security;
+
+drop policy if exists "post_comments: everyone reads" on public.post_comments;
+create policy "post_comments: everyone reads"
+  on public.post_comments for select using (true);
+
+drop policy if exists "post_comments: owner inserts" on public.post_comments;
+create policy "post_comments: owner inserts"
+  on public.post_comments for insert to authenticated with check (user_id = auth.uid());
+
+-- 글쓴이도 자기 글에 달린 댓글을 지울 수 있어요 (자기 글은 자기가 관리해요).
+drop policy if exists "post_comments: owner author or admin deletes" on public.post_comments;
+create policy "post_comments: owner author or admin deletes"
+  on public.post_comments for delete
+  using (
+    user_id = auth.uid()
+    or public.is_admin()
+    or exists (select 1 from public.posts p where p.id = post_id and p.user_id = auth.uid())
+  );
+
+drop trigger if exists posts_updated_at on public.posts;
+create trigger posts_updated_at
+  before update on public.posts
+  for each row execute procedure public.set_updated_at();
+
+-- ---------------------------------------------------------------------------
+-- 글쓴이 이름만 꺼내오는 함수
+--
+--   profiles 는 본인만 읽을 수 있어요 (취향 벡터·진단 답변이 들어 있으니까요).
+--   그렇다고 글 목록에 이름을 못 띄우면 안 되니, **이름만** 돌려주는 함수를
+--   따로 둬요. 표 전체를 열지 않고 필요한 칸만 꺼내는 거예요.
+-- ---------------------------------------------------------------------------
+create or replace function public.author_names(ids uuid[])
+returns table (id uuid, display_name text)
+language sql
+security definer set search_path = public
+stable
+as $$
+  select p.id, p.display_name from public.profiles p where p.id = any(ids);
+$$;
+
+revoke all on function public.author_names(uuid[]) from public;
+grant execute on function public.author_names(uuid[]) to authenticated, anon;
+
+-- ---------------------------------------------------------------------------
 -- 관리자 지정 (여기만 본인 것으로 바꿔서 실행하세요)
 -- ---------------------------------------------------------------------------
 -- 1) 이 이메일로 가입하면 자동으로 관리자가 돼요 (다시 가입하거나 계정을 옮길 때 대비).

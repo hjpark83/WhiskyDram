@@ -13,6 +13,7 @@ import {
   Search,
   ShieldCheck,
   Sparkles,
+  PenLine,
   Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ const nav = [
   { href: "/scan", label: "병 스캔", short: "스캔", icon: Camera },
   { href: "/journal", label: "테이스팅 노트", short: "노트", icon: NotebookPen },
   { href: "/map", label: "증류소 지도", short: "지도", icon: Globe2 },
+  { href: "/posts", label: "위스키 이야기", short: "이야기", icon: PenLine },
   { href: "/price", label: "위스키 시세", short: "시세", icon: Tag },
   { href: "/glossary", label: "용어 사전", short: "용어", icon: BookOpen },
 ];
