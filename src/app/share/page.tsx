@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { BRAND, BRAND_MARK } from "@/data/brand";
+import { BrandMark } from "@/components/brand-mark";
+import { BRAND } from "@/data/brand";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,7 +34,7 @@ export default async function SharePage({ searchParams }: PageProps<"/share">) {
     <div className="min-h-screen bg-gradient-to-b from-amber-500/10 to-background">
       <header className="mx-auto flex max-w-2xl items-center justify-between px-4 py-4">
         <Link href="/" className="brand font-bold text-amber-300">
-          {BRAND_MARK}
+          <BrandMark />
         </Link>
         <Button size="sm" render={<Link href="/quiz" />}>
           나도 진단하기

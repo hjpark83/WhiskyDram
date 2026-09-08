@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { BRAND, BRAND_MARK } from "@/data/brand";
+import { BrandMark } from "@/components/brand-mark";
+import { BRAND } from "@/data/brand";
 import {
   BookOpen,
   Camera,
@@ -67,7 +68,7 @@ export default function LandingPage() {
   return (
     <main className="flex-1">
       <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-        <span className="brand text-xl font-bold text-amber-300">{BRAND_MARK}</span>
+        <BrandMark className="brand text-xl font-bold text-amber-300" />
         <Button variant="ghost" render={<Link href="/login" />}>
           로그인
         </Button>

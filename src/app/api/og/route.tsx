@@ -64,7 +64,16 @@ export async function GET(request: NextRequest) {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 26, color: "#d9a441" }}>
-          <span>🥃</span>
+          <svg width="30" height="30" viewBox="0 0 64 64">
+            <path d="M19.1 32 L21 47 A3 3 0 0 0 24 50 L40 50 A3 3 0 0 0 43 47 L44.9 32 Z" fill="#f0a92b" />
+            <path
+              d="M17 16 L21 47 A3 3 0 0 0 24 50 L40 50 A3 3 0 0 0 43 47 L47 16 Z"
+              fill="none"
+              stroke="#f5d18a"
+              strokeWidth="3.2"
+              strokeLinejoin="round"
+            />
+          </svg>
           <span style={{ fontWeight: 700 }}>{BRAND.name}</span>
           <span style={{ color: "#b8a58d" }}>· AI 위스키 취향 진단</span>
         </div>

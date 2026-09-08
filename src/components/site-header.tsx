@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { BRAND_MARK } from "@/data/brand";
+import { BrandMark } from "@/components/brand-mark";
 
 /**
  * 메뉴가 10개라 좁은 화면에서는 긴 이름이 다 안 들어가요.
@@ -57,7 +57,7 @@ export function SiteHeader({
       <header className="sticky top-0 z-40 bg-background/85 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-4">
           <Link href="/home" className="brand shrink-0 text-lg font-bold text-amber-300">
-            {BRAND_MARK}
+            <BrandMark />
           </Link>
           <nav className="no-scrollbar hidden min-w-0 gap-0.5 overflow-x-auto sm:flex">
             {nav.map((item) => (
