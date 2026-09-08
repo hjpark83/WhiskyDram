@@ -36,7 +36,7 @@ const steps = [
   {
     n: "2",
     title: "AI 소믈리에가 3병을 골라요",
-    body: "312병 사전에서 예산·경험에 맞는 후보를 추리고, 왜 이 병인지 내 답변을 근거로 설명해요.",
+    body: `${WHISKIES.length}병 사전에서 예산·경험에 맞는 후보를 추리고, 왜 이 병인지 내 답변을 근거로 설명해요.`,
   },
   {
     n: "3",
@@ -51,7 +51,7 @@ const features = [
   { icon: Camera, title: "병 사진 스캔", body: "마트에서 찍은 라벨 한 장으로 어떤 병인지, 내 취향에 맞는지 판정." },
   { icon: NotebookPen, title: "테이스팅 노트", body: "“연기는 별로, 단맛은 좋았어요” 한 줄이 취향 프로필을 바꿔요." },
   { icon: Globe2, title: "지구본 증류소 지도", body: "지구본을 돌려 108곳 증류소를 찾고, 그곳의 병을 살펴봐요." },
-  { icon: Search, title: "312병 위스키 사전", body: "원산지·종류·스타일로 걸러 보고, 카드마다 내 취향 적합도가 보여요." },
+  { icon: Search, title: `${WHISKIES.length}병 위스키 사전`, body: "원산지·종류·스타일로 걸러 보고, 카드마다 내 취향 적합도가 보여요." },
   { icon: GitCompareArrows, title: "두 병 비교", body: "고민되는 두 병을 나란히 놓고 향미·가격·도수를 비교해요." },
   { icon: Share2, title: "결과 공유 카드", body: "“나는 달콤한 과일파” 카드를 친구에게 보내고 같이 진단해요." },
   { icon: BookOpen, title: "어려운 말은 클릭 한 번", body: "피트, 셰리 캐스크… 본문 속 용어를 누르면 바로 설명이 떠요." },
