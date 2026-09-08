@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FlavorBars } from "@/components/whisky/taste-bars";
+import { BottleArt } from "@/components/whisky/bottle-art";
 import { LiquidSwatch } from "@/components/whisky/liquid-swatch";
 import { GlossaryText } from "@/components/whisky/term";
 import { MatchBadge, WhiskyCard } from "@/components/whisky/whisky-card";
@@ -19,6 +20,8 @@ import {
   formatAge,
   formatOrigin,
   formatPriceRange,
+  liquidColor,
+  LIQUID_LABELS_KO,
   getOrigin,
   ORIGIN_LABELS_KO,
   STYLE_DESCRIPTIONS_KO,
@@ -120,11 +123,18 @@ export default async function WhiskyDetailPage({ params }: PageProps<"/whisky/[i
           ))}
           <MatchBadge percent={percent} />
         </div>
-        <div className="flex items-center gap-3">
-          <LiquidSwatch whisky={w} size="lg" />
-          <div>
+        <div className="flex items-center gap-4">
+          {/* 병 그림. 실물 사진이 아니라 숙성·통 종류로 계산한 색이에요 */}
+          <div className="h-32 w-14 shrink-0">
+            <BottleArt whisky={w} />
+          </div>
+          <div className="min-w-0">
             <h1 className="text-3xl font-bold">{w.nameKo}</h1>
             <p className="text-muted-foreground">{w.name}</p>
+            <div className="mt-2 flex items-center gap-2">
+              <LiquidSwatch whisky={w} size="sm" />
+              <span className="text-xs text-muted-foreground">{LIQUID_LABELS_KO[liquidColor(w).level]}</span>
+            </div>
           </div>
         </div>
         <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">

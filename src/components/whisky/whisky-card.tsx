@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { LiquidSwatch } from "@/components/whisky/liquid-swatch";
+import { BottleArt } from "@/components/whisky/bottle-art";
 import { cn } from "@/lib/utils";
 import {
   DIFFICULTY_LABELS_KO,
@@ -40,14 +40,17 @@ export function WhiskyCard({
   return (
     <Link href={`/whisky/${whisky.id}`} className={cn("group block", className)}>
       <Card className="h-full transition-colors group-hover:border-amber-400/60">
-        <CardContent className="flex h-full flex-col gap-3 p-5">
+        <CardContent className="flex h-full gap-4 p-5">
+          {/* 병 그림 — 계산한 액체 색과 종류별 실루엣이라 목록에서 구분이 돼요 */}
+          <div className="h-24 w-10 shrink-0 self-start transition-transform duration-300 group-hover:scale-105">
+            <BottleArt whisky={whisky} />
+          </div>
+
+          <div className="flex min-w-0 flex-1 flex-col gap-3">
           <div className="flex items-start justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-2">
-              <LiquidSwatch whisky={whisky} size="sm" />
-              <div className="min-w-0">
-                <h3 className="truncate font-semibold">{whisky.nameKo}</h3>
-                <p className="truncate text-xs text-muted-foreground">{whisky.name}</p>
-              </div>
+            <div className="min-w-0">
+              <h3 className="truncate font-semibold">{whisky.nameKo}</h3>
+              <p className="truncate text-xs text-muted-foreground">{whisky.name}</p>
             </div>
             <MatchBadge percent={percent} />
           </div>
@@ -63,6 +66,7 @@ export function WhiskyCard({
           </div>
           <p className="line-clamp-2 text-sm text-muted-foreground">{whisky.notes.nose}</p>
           <p className="mt-auto text-sm font-medium">{formatPriceRange(whisky.priceKrw)}</p>
+          </div>
         </CardContent>
       </Card>
     </Link>

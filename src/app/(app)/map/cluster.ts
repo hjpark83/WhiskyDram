@@ -47,29 +47,12 @@ export function countryKey(country: string): string {
   return COUNTRY_MERGE[country] ?? country;
 }
 
-export const COUNTRY_EMOJI: Record<string, string> = {
-  스코틀랜드: "🏴󠁧󠁢󠁳󠁣󠁴󠁿",
-  아일랜드: "🇮🇪",
-  미국: "🇺🇸",
-  일본: "🇯🇵",
-  한국: "🇰🇷",
-  대만: "🇹🇼",
-  인도: "🇮🇳",
-  호주: "🇦🇺",
-  영국: "🇬🇧",
-  캐나다: "🇨🇦",
-  프랑스: "🇫🇷",
-  스웨덴: "🇸🇪",
-  독일: "🇩🇪",
-};
-
 /** 나라·지역 묶음 (1·2단계 버블) */
 export interface GroupNode {
   kind: "country" | "region";
   key: string;
   label: string;
   sublabel: string;
-  emoji: string;
   country: string;
   region: Region | null;
   lat: number;
@@ -122,7 +105,6 @@ export function buildRegionGroups(distilleries: GlobeDistillery[]): GroupNode[] 
       key,
       label: regionLabel(list[0].country, list[0].region),
       sublabel: country,
-      emoji: COUNTRY_EMOJI[country] ?? "🥃",
       country,
       region: list[0].region,
       lat,
@@ -147,7 +129,6 @@ export function buildCountryGroups(distilleries: GlobeDistillery[]): GroupNode[]
       key,
       label: key,
       sublabel: regionCount > 1 ? `지역 ${regionCount}곳` : "",
-      emoji: COUNTRY_EMOJI[key] ?? "🥃",
       country: key,
       region: null,
       lat,
