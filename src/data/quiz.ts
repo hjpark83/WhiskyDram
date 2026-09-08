@@ -15,6 +15,15 @@ export interface QuizOption {
   label: string;
   emoji: string;
   delta?: TasteDelta;
+  /**
+   * 그 축을 **직접** 물어본 답. 정규화가 끝난 뒤 이 범위로 잘라요.
+   *
+   * 델타만 쓰면 간접 힌트가 직접 답을 지워버려요. "연기 냄새는 싫어요"(peat -2)
+   * 를 골라도 "바다·소금 향"(peat +1)·"바닷가"(peat +1) 를 고르면 합이 0 이
+   * 돼서 피트 위스키가 그대로 추천돼요. 바다 향이 좋다고 답한 게 연기가
+   * 싫다는 답을 덮으면 안 되니까, 직접 물어본 답에 우선권을 줍니다.
+   */
+  decisive?: Partial<Record<TasteAxis, { min?: number; max?: number }>>;
 }
 
 export interface QuizQuestion {
@@ -69,6 +78,7 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
         emoji: "🔥",
         label: "완전 좋아요, 불맛은 못 참죠",
         delta: { peat: 2, body: 1 },
+        decisive: { peat: { min: 1 } },
       },
       {
         id: "sometimes",
@@ -81,12 +91,40 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
         emoji: "😐",
         label: "별로 안 찾아요",
         delta: { peat: -1 },
+        decisive: { peat: { max: -1 } },
       },
       {
         id: "hate",
         emoji: "🙅",
         label: "연기 냄새는 싫어요",
         delta: { peat: -2, body: -1 },
+        decisive: { peat: { max: -2 } },
+      },
+    ],
+  },
+  {
+    id: "medicinal",
+    kind: "taste",
+    question: "정로환, 소독약, 병원 냄새 같은 건 어때요?",
+    hint: "연기 향이 아주 강한 위스키에서 이런 냄새가 나요. 연기는 괜찮아도 이건 못 견디는 분이 많아요.",
+    options: [
+      {
+        id: "fine",
+        emoji: "😌",
+        label: "별로 안 거슬려요",
+        delta: { peat: 1 },
+      },
+      {
+        id: "soso",
+        emoji: "😐",
+        label: "좋지도 싫지도 않아요",
+      },
+      {
+        id: "no",
+        emoji: "🤢",
+        label: "그 냄새는 정말 싫어요",
+        delta: { peat: -2 },
+        decisive: { peat: { max: -1 } },
       },
     ],
   },
@@ -131,6 +169,7 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
         emoji: "🌶️",
         label: "마라·불닭도 즐겨요",
         delta: { spice: 2, body: 1 },
+        decisive: { spice: { min: 1 } },
       },
       {
         id: "moderate",
@@ -143,6 +182,7 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
         emoji: "🍚",
         label: "순한 음식이 좋아요",
         delta: { spice: -2, body: -1 },
+        decisive: { spice: { max: -1 } },
       },
     ],
   },
@@ -234,6 +274,49 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
       { id: "friends", emoji: "🍻", label: "친구들과 왁자지껄" },
       { id: "meal", emoji: "🍽️", label: "밥이나 안주와 함께" },
       { id: "gift", emoji: "🎁", label: "선물할 병을 찾아요" },
+    ],
+  },
+  {
+    id: "citrus",
+    kind: "taste",
+    question: "레몬·자몽처럼 상큼하고 새콤한 맛은?",
+    options: [
+      { id: "love", emoji: "🍋", label: "상큼한 거 좋아해요", delta: { fruit: 2, floral: 1, body: -1 } },
+      { id: "ok", emoji: "🙂", label: "보통이에요", delta: { fruit: 1 } },
+      { id: "no", emoji: "😖", label: "신맛은 별로예요", delta: { fruit: -2, sweet: 1 } },
+    ],
+  },
+  {
+    id: "flower",
+    kind: "taste",
+    question: "꽃향기 나는 비누나 섬유유연제는 어때요?",
+    hint: "가볍고 산뜻한 위스키에서 이런 향이 나요.",
+    options: [
+      { id: "love", emoji: "💐", label: "향긋해서 좋아요", delta: { floral: 2 } },
+      { id: "ok", emoji: "🙂", label: "무난해요", delta: { floral: 1 } },
+      { id: "no", emoji: "🙅", label: "인공적인 꽃향은 싫어요", delta: { floral: -2, oak: 1 } },
+    ],
+  },
+  {
+    id: "dried_fruit",
+    kind: "taste",
+    question: "건포도, 곶감, 말린 무화과 같은 건과일은?",
+    hint: "셰리 통에서 숙성한 위스키가 딱 이 맛이에요.",
+    options: [
+      { id: "love", emoji: "🍇", label: "쫀득하고 달아서 좋아요", delta: { fruit: 2, sweet: 2, oak: 1, body: 1 } },
+      { id: "ok", emoji: "🙂", label: "가끔 먹어요", delta: { fruit: 1, sweet: 1 } },
+      { id: "no", emoji: "🙅", label: "말린 과일은 안 좋아해요", delta: { fruit: -1, sweet: -1 } },
+    ],
+  },
+  {
+    id: "strength",
+    kind: "taste",
+    question: "술은 도수가 센 편이 좋아요, 순한 편이 좋아요?",
+    hint: "위스키는 보통 40도인데, 50도가 넘는 것도 있어요.",
+    options: [
+      { id: "strong", emoji: "🥵", label: "화끈하게 센 게 좋아요", delta: { body: 2, spice: 1, oak: 1 } },
+      { id: "normal", emoji: "🙂", label: "적당한 게 좋아요" },
+      { id: "light", emoji: "💧", label: "순하고 부드러운 게 좋아요", delta: { body: -2, spice: -1, sweet: 1 } },
     ],
   },
   {

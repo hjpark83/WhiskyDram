@@ -9203,6 +9203,22 @@ export const WHISKIES: Whisky[] = [
     location: { lat: 47.9167, lng: -4.1500 }, aliases: ["Eddu Gold", "에뒤 골드"],
   },
   {
+    id: "version-francaise-le-malt", name: "Version Francaise Le Malt", nameKo: "베르시옹 프랑세즈 르 몰트",
+    distillery: "Hepp", region: "Other", country: "프랑스",
+    type: "single_malt", styles: ["bourbon_cask", "sherry", "wine_cask"], abv: 40, age: null,
+    priceKrw: [70000, 95000], difficulty: 1,
+    flavor: { peat: 0, fruit: 4, sweet: 3, spice: 2, floral: 4, oak: 2, body: 2 },
+    notes: {
+      nose: "배와 흰 꽃, 헤이즐넛에 베르가못 같은 상큼함",
+      palate: "계피와 천도복숭아, 사과. 달콤하면서 살짝 알싸해요",
+      finish: "사과 타르트와 시럽에 조린 배 같은 단 여운",
+    },
+    beginnerTip: "알자스 Hepp 증류소 몰트를 버번·바뉠스(프랑스 와인)·셰리 통 세 가지로 숙성해 섞었어요. 40도에 꽃·과일 향이라 프랑스 위스키 입문으로 좋아요. 500ml 병이에요.",
+    pairings: ["사과 타르트", "부드러운 치즈", "견과류"],
+    location: { lat: 48.8306, lng: 7.7139 },
+    aliases: ["Version Francaise Le Malt", "Version Française Le Malt", "VERSION FRANCAISE", "베르시옹 프랑세즈", "버전 프랑세즈"],
+  },
+  {
     id: "bellevoye-blanc", name: "Bellevoye Blanc", nameKo: "벨부아 블랑",
     distillery: "Les Bienheureux", region: "Other", country: "프랑스",
     type: "single_malt", styles: ["wine_cask"], abv: 40, age: null,
