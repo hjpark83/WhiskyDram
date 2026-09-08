@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
   BookOpen,
   Camera,
@@ -11,6 +12,8 @@ import {
   MessageCircle,
   NotebookPen,
   Search,
+  MoreHorizontal,
+  Settings,
   ShieldCheck,
   Sparkles,
   PenLine,
@@ -39,8 +42,13 @@ const nav = [
   { href: "/glossary", label: "용어 사전", short: "용어", icon: BookOpen },
 ];
 
-/** 모바일 하단 탭에 넣을 5개 */
-const MOBILE_TABS = ["/home", "/quiz", "/chat", "/scan", "/whisky"];
+/**
+ * 모바일 하단 탭에 넣을 4개. 다섯 번째 칸은 "더보기" 예요.
+ *
+ * 예전엔 5개를 넣었는데, 메뉴가 12개라 **나머지 7개는 모바일에서 아예 갈 수가
+ * 없었어요.** (지도·시세·이야기·노트·용어…) 넷만 고정하고 나머지는 더보기로 빼요.
+ */
+const MOBILE_TABS = ["/home", "/quiz", "/scan", "/whisky"];
 
 export function SiteHeader({
   email,
@@ -58,8 +66,12 @@ export function SiteHeader({
   signedIn?: boolean;
 }) {
   const pathname = usePathname();
+  const [moreOpen, setMoreOpen] = useState(false);
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
   const items = signedIn ? nav : nav.filter((item) => item.href === "/posts");
+  /** 하단 탭에 자리가 없어 "더보기" 로 가는 나머지 메뉴 */
+  const moreItems = nav.filter((item) => !MOBILE_TABS.includes(item.href));
+
 
   return (
     <>
@@ -149,8 +161,75 @@ export function SiteHeader({
               </li>
             );
           })}
+          <li>
+            <button
+              type="button"
+              onClick={() => setMoreOpen((v) => !v)}
+              aria-expanded={moreOpen}
+              className={cn(
+                "flex w-full flex-col items-center gap-0.5 py-2 text-[11px]",
+                moreOpen || moreItems.some((i) => isActive(i.href))
+                  ? "text-amber-400"
+                  : "text-muted-foreground",
+              )}
+            >
+              <MoreHorizontal className="size-5" aria-hidden />
+              더보기
+            </button>
+          </li>
         </ul>
       </nav>
+      )}
+
+      {/* 더보기 — 하단 탭에 자리가 없는 나머지 메뉴 */}
+      {signedIn && moreOpen && (
+        <>
+          <button
+            type="button"
+            aria-label="더보기 닫기"
+            onClick={() => setMoreOpen(false)}
+            className="fixed inset-0 z-40 bg-black/50 sm:hidden"
+          />
+          <div
+            className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl border-t bg-background p-3 pb-[calc(env(safe-area-inset-bottom)+4.5rem)] sm:hidden"
+          >
+            <p className="px-2 pb-2 text-xs text-muted-foreground">메뉴</p>
+            <ul className="grid grid-cols-3 gap-1">
+              {moreItems.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.href);
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      onClick={() => setMoreOpen(false)}
+                      className={cn(
+                        "flex flex-col items-center gap-1 rounded-xl px-2 py-3 text-[11px]",
+                        active ? "bg-amber-500/10 text-amber-300" : "text-muted-foreground",
+                      )}
+                    >
+                      <Icon className="size-5" aria-hidden />
+                      {item.short}
+                    </Link>
+                  </li>
+                );
+              })}
+              <li>
+                <Link
+                  href="/settings"
+                  onClick={() => setMoreOpen(false)}
+                  className={cn(
+                    "flex flex-col items-center gap-1 rounded-xl px-2 py-3 text-[11px]",
+                    isActive("/settings") ? "bg-amber-500/10 text-amber-300" : "text-muted-foreground",
+                  )}
+                >
+                  <Settings className="size-5" aria-hidden />
+                  내 정보
+                </Link>
+              </li>
+            </ul>
+          </div>
+        </>
       )}
     </>
   );

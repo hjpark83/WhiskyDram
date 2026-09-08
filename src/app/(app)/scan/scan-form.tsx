@@ -35,6 +35,7 @@ const CONFIDENCE_LABEL = { high: "확실해요", medium: "브랜드는 맞는데
 
 export function ScanForm({ personalized }: { personalized: boolean }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [base64, setBase64] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<ScanResult | null>(null);
@@ -97,14 +98,28 @@ export function ScanForm({ personalized }: { personalized: boolean }) {
     setOutcome(null);
     setRevealed(null);
     setPhase("idle");
+    // 두 입력 모두 비워야 **같은 사진을 다시 골라도** onChange 가 다시 떠요
     if (inputRef.current) inputRef.current.value = "";
+    if (cameraRef.current) cameraRef.current.value = "";
   }
 
   return (
     <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
       <div className="space-y-3">
+        {/*
+          입력을 두 개 두는 이유: `capture` 가 붙어 있으면 모바일에서 **앨범을
+          못 열고 카메라만 켜져요.** 이미 찍어둔 사진으로 스캔하고 싶은 경우가
+          훨씬 많아서, 기본은 앨범이고 카메라는 따로 눌러 쓰게 했어요.
+        */}
         <input
           ref={inputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => onFile(e.target.files?.[0])}
+        />
+        <input
+          ref={cameraRef}
           type="file"
           accept="image/*"
           capture="environment"
@@ -127,25 +142,43 @@ export function ScanForm({ personalized }: { personalized: boolean }) {
             />
           ) : (
             <>
-              <Camera className="size-10" aria-hidden />
-              <span className="font-medium text-foreground">사진 찍기 또는 올리기</span>
+              <ImagePlus className="size-10" aria-hidden />
+              <span className="font-medium text-foreground">앨범에서 사진 고르기</span>
               <span className="px-6 text-center text-xs">
-                라벨이 정면으로 보이게, 밝은 곳에서 찍으면 잘 읽혀요.
+                라벨이 정면으로 보이게, 밝은 곳에서 찍은 사진이 잘 읽혀요.
               </span>
             </>
           )}
         </button>
         <div className="flex gap-2">
-          {preview && (
-            <Button variant="outline" onClick={reset} disabled={busy}>
-              <RotateCcw data-icon="inline-start" />
-              다시 찍기
-            </Button>
+          {preview ? (
+            <>
+              <Button variant="outline" onClick={reset} disabled={busy}>
+                <RotateCcw data-icon="inline-start" />
+                다시 고르기
+              </Button>
+              <Button onClick={scan} disabled={busy} className="flex-1">
+                <Sparkles data-icon="inline-start" />
+                {busy ? "라벨을 읽는 중…" : "이 병 알아보기"}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button onClick={() => inputRef.current?.click()} disabled={busy} className="flex-1">
+                <ImagePlus data-icon="inline-start" />
+                앨범에서 고르기
+              </Button>
+              {/* 카메라는 따로. 예전엔 이것만 열려서 앨범 사진을 못 썼어요. */}
+              <Button
+                variant="outline"
+                onClick={() => cameraRef.current?.click()}
+                disabled={busy}
+              >
+                <Camera data-icon="inline-start" />
+                찍기
+              </Button>
+            </>
           )}
-          <Button onClick={preview ? scan : () => inputRef.current?.click()} disabled={busy} className="flex-1">
-            {preview ? <Sparkles data-icon="inline-start" /> : <ImagePlus data-icon="inline-start" />}
-            {busy ? "라벨을 읽는 중…" : preview ? "이 병 알아보기" : "사진 고르기"}
-          </Button>
         </div>
       </div>
 
@@ -299,7 +332,7 @@ export function ScanForm({ personalized }: { personalized: boolean }) {
                   사전에서 검색
                 </Button>
                 <Button size="sm" variant="ghost" onClick={reset}>
-                  다시 찍기
+                  다른 사진으로
                 </Button>
               </div>
             </CardContent>
