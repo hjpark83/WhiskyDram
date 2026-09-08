@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FlavorBars } from "@/components/whisky/taste-bars";
 import { BottlePhotos } from "@/components/whisky/bottle-photos";
+import { BuyLinks } from "@/components/whisky/buy-links";
+import { WhiskyExplainer } from "@/components/whisky/whisky-explainer";
 import { LiquidSwatch } from "@/components/whisky/liquid-swatch";
 import { GlossaryText } from "@/components/whisky/term";
 import { MatchBadge, WhiskyCard } from "@/components/whisky/whisky-card";
@@ -16,6 +18,7 @@ import { formatPeriod, popupStatus, statusNote } from "@/lib/popup/format";
 import { listPopups } from "@/lib/popup/store";
 import { createClient } from "@/lib/supabase/server";
 import { getWhiskyPhotos } from "@/lib/whisky/photos";
+import { excerpt, listPosts } from "@/lib/community/posts";
 import {
   DIFFICULTY_LABELS_KO,
   formatAge,
@@ -66,6 +69,9 @@ export default async function WhiskyDetailPage({ params }: PageProps<"/whisky/[i
 
   // 사용자가 스캔하며 올린 실물 사진 (없으면 병 그림으로 보여줘요)
   const photos = await getWhiskyPhotos(supabase, w.id, user?.id ?? null);
+
+  // 이 병에 대해 사람들이 쓴 글
+  const posts = await listPosts(supabase, { whiskyId: w.id, limit: 3, viewerId: user?.id ?? null });
 
   // 이 병을 맛볼 수 있는, 아직 끝나지 않은 팝업
   const popups = (await listPopups()).filter(
@@ -170,6 +176,8 @@ export default async function WhiskyDetailPage({ params }: PageProps<"/whisky/[i
         </dl>
       </header>
 
+      <WhiskyExplainer whisky={w} />
+
       <section className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
@@ -242,6 +250,51 @@ export default async function WhiskyDetailPage({ params }: PageProps<"/whisky/[i
             </p>
           </div>
         </div>
+      </section>
+
+      <section className="grid gap-4 sm:grid-cols-2">
+        <BuyLinks whisky={w} />
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-2">
+            <CardTitle className="text-base">이 병 이야기</CardTitle>
+            <Button size="sm" variant="ghost" render={<Link href={`/posts/new?whisky=${w.id}`} />}>
+              글 쓰기
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {posts.length === 0 ? (
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                아직 이 병에 대한 글이 없어요. 마셔보셨다면 첫 글을 남겨주세요.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {posts.map((post) => (
+                  <li key={post.id}>
+                    <Link
+                      href={`/posts/${post.id}`}
+                      className="block rounded-lg border p-3 transition hover:border-amber-400/40"
+                    >
+                      <span className="block text-sm font-medium">{post.title}</span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">
+                        {post.authorName}
+                        {post.rating !== null && ` · ${"★".repeat(post.rating)}`}
+                      </span>
+                      <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
+                        {excerpt(post.body, 70)}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {posts.length > 0 && (
+              <Link href="/posts" className="block text-xs text-amber-300 hover:underline">
+                이야기 전체 보기 →
+              </Link>
+            )}
+          </CardContent>
+        </Card>
       </section>
 
       <section className="space-y-3">
