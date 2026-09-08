@@ -10,7 +10,9 @@ import {
   type PopupDraft,
   type ResearchReport,
 } from "@/lib/ai/popup-research";
+import { getWhisky } from "@/data/whiskies";
 import { getAdminUser } from "@/lib/auth/admin";
+import { searchCommons, type CommonsPhoto } from "@/lib/whisky/commons";
 import { createClient } from "@/lib/supabase/server";
 import { BOTTLE_PHOTO_BUCKET } from "@/lib/whisky/photos";
 
@@ -417,6 +419,82 @@ export async function rejectPhoto(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/photos");
   if (whiskyId) revalidatePath(`/whisky/${whiskyId}`);
+}
+
+// ---------------------------------------------------------------------------
+// 위키미디어 커먼즈 사진 붙이기
+//   자유 라이선스 사진만 붙일 수 있고, 출처·촬영자·라이선스를 함께 저장해요.
+//   그게 라이선스가 요구하는 조건이라 안 지키면 쓸 수 없어요.
+// ---------------------------------------------------------------------------
+
+export type CommonsSearchState =
+  | { error: string }
+  | { whiskyId: string; query: string; photos: CommonsPhoto[] }
+  | null;
+
+export async function searchCommonsPhotos(
+  _prev: CommonsSearchState,
+  formData: FormData,
+): Promise<CommonsSearchState> {
+  const admin = await getAdminUser();
+  if (!admin) return { error: "관리자만 쓸 수 있어요." };
+
+  const whiskyId = String(formData.get("whiskyId") ?? "").trim();
+  const whisky = getWhisky(whiskyId);
+  if (!whisky) return { error: "위스키를 먼저 골라주세요." };
+
+  // 영문 이름으로 찾아야 걸려요. 한글 이름으로는 커먼즈에 거의 없어요.
+  const query = String(formData.get("query") ?? "").trim() || whisky.name;
+  const photos = await searchCommons(query);
+  if (photos.length === 0) {
+    return { error: `"${query}" 로는 찾은 사진이 없어요. 검색어를 바꿔보세요.` };
+  }
+  return { whiskyId, query, photos };
+}
+
+export type AttachState = { error?: string; message?: string } | null;
+
+export async function attachCommonsPhoto(
+  _prev: AttachState,
+  formData: FormData,
+): Promise<AttachState> {
+  const admin = await getAdminUser();
+  if (!admin) return { error: "관리자만 쓸 수 있어요." };
+
+  const whiskyId = String(formData.get("whiskyId") ?? "").trim();
+  const imageUrl = String(formData.get("imageUrl") ?? "").trim();
+  const sourceUrl = String(formData.get("sourceUrl") ?? "").trim();
+  const credit = String(formData.get("credit") ?? "").trim();
+  const license = String(formData.get("license") ?? "").trim();
+
+  if (!getWhisky(whiskyId)) return { error: "위스키를 찾지 못했어요." };
+  if (!imageUrl || !sourceUrl || !license) {
+    return { error: "출처와 라이선스가 없는 사진은 붙일 수 없어요." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("whisky_photos").insert({
+    whisky_id: whiskyId,
+    user_id: admin.id,
+    image_url: imageUrl,
+    source: "commons",
+    source_url: sourceUrl,
+    credit: credit || null,
+    license,
+    // 관리자가 라이선스를 보고 직접 고른 것이라 바로 공개해요
+    approved: true,
+  });
+  if (error) {
+    if (error.code === "23505") return { error: "이미 붙어 있는 사진이에요." };
+    if (error.code === "42703" || error.code === "42P01") {
+      return { error: "사진 표가 최신이 아니에요. supabase/schema.sql 을 다시 실행해주세요." };
+    }
+    return { error: `붙이지 못했어요 (${error.code ?? "?"}). ${error.message}` };
+  }
+
+  revalidatePath(`/whisky/${whiskyId}`);
+  revalidatePath("/admin/photos");
+  return { message: "붙였어요. 위스키 화면에 바로 보여요." };
 }
 
 // ---------------------------------------------------------------------------
