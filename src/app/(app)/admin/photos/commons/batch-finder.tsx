@@ -73,9 +73,28 @@ export function BatchFinder({ targets }: { targets: BatchTarget[] }) {
               후보를 찾은 병 {withPhoto.length}개 / {candidates.length}개.{" "}
               <strong className="text-amber-200">이 병이 맞는지 눈으로 확인하고</strong> 체크해주세요.
             </p>
-            <Button type="submit" size="sm" disabled={attaching || withPhoto.length === 0}>
-              {attaching ? "붙이는 중…" : "체크한 사진 붙이기"}
-            </Button>
+            <div className="flex items-center gap-2">
+              {/* 하나씩 누르지 않아도 되게. 그래도 눈으로는 훑어봐주세요. */}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={(e) => {
+                  const form = e.currentTarget.closest("form");
+                  if (!form) return;
+                  const boxes = form.querySelectorAll<HTMLInputElement>('input[name="pick"]');
+                  const allOn = [...boxes].every((b) => b.checked);
+                  boxes.forEach((b) => {
+                    b.checked = !allOn;
+                  });
+                }}
+              >
+                전체 선택 / 해제
+              </Button>
+              <Button type="submit" size="sm" disabled={attaching || withPhoto.length === 0}>
+                {attaching ? "붙이는 중…" : "체크한 사진 붙이기"}
+              </Button>
+            </div>
           </div>
 
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
