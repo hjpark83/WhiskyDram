@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
   const textForFont = [
     // 폰트를 이 글자들만 잘라서 받아와요. 브랜드 이름이 바뀌면 글자도 따라와야
     // 해서 상수에서 가져와요 — 빠뜨리면 그 글자만 네모로 나와요.
-    `${BRAND.name} ${BRAND.tagline} `,
+    `${BRAND.name} ${BRAND.nameKo} ${BRAND.tagline} `,
     "나는 AI 위스키 취향 진단 추천받은 첫 위스키 커피·디저트 취향만 답하면 1분 진단 “” ",
     title,
     ...lines,

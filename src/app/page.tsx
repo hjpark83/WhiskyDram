@@ -76,9 +76,9 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="mx-auto grid max-w-5xl items-center gap-10 px-6 pb-16 pt-10 lg:grid-cols-[1.1fr_1fr] lg:pt-16">
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-          {/* 이름이 말장난이라 뜻을 한 번 풀어줘요 — 처음 온 사람도 바로 알아듣게 */}
+          {/* 이름이 말장난이라 무슨 서비스인지 한 줄로 붙여줘요 */}
           <p className="mb-4 text-sm font-medium text-amber-400">
-            {BRAND.tagline} <span className="text-amber-400/60">· {BRAND.hanja}</span>
+            {BRAND.tagline} <span className="text-amber-400/60">· {BRAND.nameKo}</span>
           </p>
           <h1 className="text-4xl leading-tight tracking-tight sm:text-5xl">
             <span className="text-shine">위스키, 뭐부터</span>
