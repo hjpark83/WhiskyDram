@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BottleArt } from "@/components/whisky/bottle-art";
 import { BrandMark } from "@/components/brand-mark";
 import { BRAND } from "@/data/brand";
 import {
@@ -15,7 +16,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { LiquidSwatch } from "@/components/whisky/liquid-swatch";
 import { TasteBars } from "@/components/whisky/taste-bars";
 import { WhiskyGlass3D } from "@/components/whisky/whisky-glass-3d";
 import { getDistilleries } from "@/data/distilleries";
@@ -127,14 +127,18 @@ export default function LandingPage() {
             <TasteBars profile={SAMPLE_PROFILE} />
             <ul className="grid gap-2 sm:grid-cols-3">
               {picks.map((w) => (
-                <li key={w.id} className="rounded-xl border p-3">
-                  <div className="flex items-center gap-2">
-                    <LiquidSwatch whisky={w} size="sm" />
-                    <p className="truncate text-sm font-semibold">{w.nameKo}</p>
+                <li key={w.id} className="flex gap-3 rounded-xl border p-3">
+                  {/* 병 그림 — 액체 색이 숙성·통 종류에서 계산돼요 */}
+                  <div className="h-16 w-7 shrink-0">
+                    <BottleArt whisky={w} showLabel={false} />
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {TYPE_SHORT_KO[w.type]} · {formatPriceRange(w.priceKrw)}
-                  </p>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{w.nameKo}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {TYPE_SHORT_KO[w.type]}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{formatPriceRange(w.priceKrw)}</p>
+                  </div>
                 </li>
               ))}
             </ul>
