@@ -3,11 +3,28 @@ import Link from "next/link";
 import { ArrowLeft, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WHISKIES } from "@/data/whiskies";
+import { createClient } from "@/lib/supabase/server";
+import { storyFor } from "@/lib/whisky/explain";
+import { BatchFinder } from "./batch-finder";
 import { CommonsFinder } from "./commons-finder";
 
 export const metadata: Metadata = { title: "커먼즈에서 사진 찾기" };
 
-export default function AdminCommonsPage() {
+export default async function AdminCommonsPage() {
+  // 이미 사진이 있는 병은 빼요
+  const supabase = await createClient();
+  const { data } = await supabase.from("whisky_photos").select("whisky_id");
+  const has = new Set((data ?? []).map((r) => (r as { whisky_id: string }).whisky_id));
+
+  /**
+   * 한 번에 채울 후보. 사람들이 실제로 열어보는 병부터예요 —
+   * 브랜드 이야기가 붙어 있고(= 유명한 축), 입문 난이도가 낮은 순서.
+   */
+  const targets = WHISKIES.filter((w) => !has.has(w.id) && storyFor(w) && !w.limited)
+    .sort((a, b) => a.difficulty - b.difficulty || a.priceKrw[0] - b.priceKrw[0])
+    .slice(0, 12)
+    .map((w) => ({ id: w.id, label: `${w.nameKo} (${w.name})` }));
+
   const whiskies = WHISKIES.map((w) => ({
     id: w.id,
     label: `${w.nameKo} (${w.name})`,
@@ -44,7 +61,32 @@ export default function AdminCommonsPage() {
         </div>
       </div>
 
-      <CommonsFinder whiskies={whiskies} />
+      <section className="space-y-3">
+        <div>
+          <h3 className="text-lg text-amber-100">여러 병 한 번에</h3>
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+            사진이 아직 없는 병 중 사람들이 많이 열어보는 것부터 12개씩 찾아와요. 맞는 사진만
+            체크해서 한꺼번에 붙이면 돼요. 다 붙이면 다음 12개가 나와요.
+          </p>
+        </div>
+        {targets.length === 0 ? (
+          <p className="rounded-xl border p-4 text-sm text-muted-foreground">
+            채울 병이 없어요. 유명한 병에는 사진이 다 붙어 있어요.
+          </p>
+        ) : (
+          <BatchFinder targets={targets} />
+        )}
+      </section>
+
+      <section className="space-y-3 border-t pt-5">
+        <div>
+          <h3 className="text-lg text-amber-100">한 병만 골라서</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            특정 병에 다른 사진을 붙이고 싶을 때 써요.
+          </p>
+        </div>
+        <CommonsFinder whiskies={whiskies} />
+      </section>
     </div>
   );
 }
