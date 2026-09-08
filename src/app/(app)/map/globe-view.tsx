@@ -23,11 +23,13 @@ import {
   buildRegionGroups,
   clusterPins,
   countryKey,
-  REGION_ZOOM,
+  levelForAltitude,
   searchDistilleries,
   type GroupNode,
   type PinNode,
 } from "./cluster";
+import { Flag } from "./flag";
+import { flagSvg } from "./flags";
 import { buildLandTextureUrl } from "./land-texture";
 
 const Globe = dynamic(() => import("react-globe.gl"), {
@@ -197,11 +199,17 @@ export function GlobeView({
   const handleZoom = useCallback((pov: { altitude: number }) => {
     setAltitude(pov.altitude);
     if (Date.now() < flyingUntil.current) return;
-    if (pov.altitude > REGION_ZOOM) {
+    // 스크롤만으로도 나라 → 지역 → 증류소까지 내려가야 해요.
+    // 예전엔 "지역" 에서 멈춰서, 아무리 확대해도 증류소 핀이 안 나왔어요
+    // (그래서 "확대했는데 증류소가 클릭이 안 된다" 가 됐어요).
+    const level = levelForAltitude(pov.altitude);
+    if (level === "country") {
       setStage("countries");
       setFocus((f) => (f.country ? {} : f));
+    } else if (level === "region") {
+      setStage("regions");
     } else {
-      setStage((s) => (s === "countries" ? "regions" : s));
+      setStage("pins");
     }
   }, []);
 
@@ -315,7 +323,7 @@ export function GlobeView({
       } else {
         const g = obj as GroupNode;
         inner.className = "globe-cluster-inner";
-        inner.innerHTML = `<span>${g.emoji}</span><b>${g.label}</b><small>증류소 ${g.count}</small>`;
+        inner.innerHTML = `${flagSvg(g.country, 16)}<b>${g.label}</b><small>증류소 ${g.count}</small>`;
         el.appendChild(inner);
         el.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -419,7 +427,7 @@ export function GlobeView({
       >
         <span className="min-w-0">
           <span className="block truncate">
-            {g.emoji} <span className="font-medium">{g.label}</span>
+            <Flag country={g.country} /> <span className="font-medium">{g.label}</span>
           </span>
           {g.sublabel && <span className="block truncate text-xs text-muted-foreground">{g.sublabel}</span>}
         </span>
