@@ -16,19 +16,20 @@ import {
   Settings,
   ShieldCheck,
   Sparkles,
+  Store,
   PenLine,
   Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { BrandMark } from "@/components/brand-mark";
+import { FEATURES } from "@/data/features";
 
 /**
  * 메뉴가 10개라 좁은 화면에서는 긴 이름이 다 안 들어가요.
  * 그래서 `short` 를 기본으로 보여주고, 넓은 화면(xl)에서만 `label` 을 보여줘요.
  */
 const nav = [
-  // 팝업 스토어는 FEATURES.popup 으로 꺼둔 상태예요 (src/data/features.ts)
   { href: "/home", label: "홈", short: "홈", icon: Home },
   { href: "/quiz", label: "취향 진단", short: "진단", icon: Compass },
   { href: "/recommend", label: "내 추천", short: "추천", icon: Sparkles },
@@ -40,6 +41,11 @@ const nav = [
   { href: "/posts", label: "위스키 이야기", short: "이야기", icon: PenLine },
   { href: "/price", label: "위스키 시세", short: "시세", icon: Tag },
   { href: "/glossary", label: "용어 사전", short: "용어", icon: BookOpen },
+  // 팝업은 FEATURES.popup 으로 켜고 꺼요 (src/data/features.ts). 꺼져 있으면
+  // 주소로 들어가도 404 라서, 메뉴에도 안 보이게 여기서 같이 빼요.
+  ...(FEATURES.popup
+    ? [{ href: "/popup", label: "팝업 스토어", short: "팝업", icon: Store }]
+    : []),
 ];
 
 /**

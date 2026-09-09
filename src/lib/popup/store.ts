@@ -18,6 +18,15 @@ export interface PopupRecord extends PopupStore {
   sources: string[];
   /** 관리자가 확인해야 할 것 */
   aiNote: string | null;
+  /**
+   * 이 정보를 마지막으로 손본 시각 (ISO).
+   *
+   * 정리해서 우리 화면에 두는 방식은 링크만 걸어두는 것보다 훨씬 편한데,
+   * **오래되면 링크보다 나빠져요** — 우리 이름으로 틀린 기간을 보여주는 거니까요.
+   * 그래서 언제 확인한 정보인지 화면에 같이 적어요. 예시 시드는 확인 날짜가
+   * 없어서 null 이에요.
+   */
+  updatedAt: string | null;
 }
 
 interface PopupRow {
@@ -45,6 +54,7 @@ interface PopupRow {
   ai_generated: boolean | null;
   sources: unknown;
   ai_note: string | null;
+  updated_at: string | null;
 }
 
 const RESERVATIONS: PopupReservation[] = ["catchtable", "naver", "instagram", "walkin"];
@@ -96,6 +106,7 @@ function toRecord(row: PopupRow): PopupRecord {
       ? row.sources.filter((u): u is string => typeof u === "string" && /^https?:\/\//i.test(u))
       : [],
     aiNote: row.ai_note,
+    updatedAt: row.updated_at,
   };
 }
 
@@ -107,11 +118,13 @@ function seedRecords(): PopupRecord[] {
     aiGenerated: false,
     sources: [],
     aiNote: null,
+    // 예시 시드는 실제로 확인한 정보가 아니라 확인 날짜가 없어요
+    updatedAt: null,
   }));
 }
 
 const COLUMNS =
-  "id, brand, brand_en, title, summary, description, highlights, venue, address, city, start_date, end_date, hours, entry, reservation, links, whisky_ids, tags, accent, image_url, published, ai_generated, sources, ai_note";
+  "id, brand, brand_en, title, summary, description, highlights, venue, address, city, start_date, end_date, hours, entry, reservation, links, whisky_ids, tags, accent, image_url, published, ai_generated, sources, ai_note, updated_at";
 
 export async function listPopups(opts: { includeUnpublished?: boolean } = {}): Promise<PopupRecord[]> {
   try {

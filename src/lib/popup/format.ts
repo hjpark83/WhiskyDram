@@ -77,15 +77,30 @@ export function instagramTagUrl(tag: string): string {
 
 /**
  * 화면에 띄울 링크 목록.
- * 관리자가 넣은 링크를 먼저 쓰고, 없는 종류는 검색 링크로 채워요.
- * (캐치테이블·네이버는 공개 API가 없어서 예약 링크는 관리자 입력값을 그대로 이어줘요.)
+ *
+ * ## 검색 링크를 함부로 만들지 않아요
+ *
+ * 예전엔 팝업마다 「네이버에서 정보 찾기」를 **무조건** 만들어 붙였어요.
+ * 그게 사실은 "우리는 정보가 없으니 직접 찾아보세요" 라는 뜻이라, 정보를
+ * 가져와 정리해두는 방식과 어긋나요. 기간·장소·시간을 이미 화면에 적어놓고
+ * 옆에 "네이버에서 찾아보세요" 를 나란히 두면 어느 쪽을 믿어야 할지 헷갈려요.
+ *
+ * 그래서 **근거(출처)가 이미 있으면 검색 링크를 만들지 않아요.** 출처는 아래
+ * "출처" 자리에 따로 보여주고 있어서, 확인하려는 사람은 그걸 누르면 돼요.
+ * 정리된 정보가 아예 없을 때만(관리자가 제목만 넣어둔 경우 등) 검색 링크를
+ * 통로로 남겨둬요.
+ *
+ * 지도와 인스타그램은 성격이 달라서 그대로 둬요 — 지도는 "찾아가기" 고,
+ * 인스타는 "가본 사람 후기" 라 우리가 정리해 줄 수 있는 정보가 아니에요.
  */
-export function resolveLinks(p: PopupStore): PopupLink[] {
+export function resolveLinks(p: PopupStore, opts: { hasSources?: boolean } = {}): PopupLink[] {
   const out: PopupLink[] = [...p.links];
   const has = (kind: PopupLink["kind"]) => out.some((l) => l.kind === kind);
   const keyword = `${p.brand} 팝업스토어`;
+  /** 기간 말고 실제로 안내할 내용이 있는지 (없으면 검색 링크가 유일한 통로예요) */
+  const organized = Boolean(opts.hasSources || p.hours || p.entry || p.description || p.venue);
 
-  if (!has("naver")) {
+  if (!has("naver") && !organized) {
     out.push({ kind: "naver", label: "네이버에서 정보 찾기", url: naverSearchUrl(keyword) });
   }
   if (!has("map") && p.address) {
@@ -95,6 +110,26 @@ export function resolveLinks(p: PopupStore): PopupLink[] {
     out.push({ kind: "instagram", label: "인스타그램 후기 보기", url: instagramTagUrl(`${p.brand}팝업`) });
   }
   return out;
+}
+
+/**
+ * "9월 9일에 확인한 정보예요" 에 쓸 문구.
+ *
+ * 정리해둔 정보의 수명을 사용자가 스스로 판단할 수 있게 해주는 값이에요.
+ * 오늘·어제는 날짜보다 그 말이 더 잘 읽혀요.
+ */
+export function checkedAtText(iso: string | null): string | null {
+  if (!iso) return null;
+  const then = new Date(iso);
+  if (Number.isNaN(then.getTime())) return null;
+
+  // 날짜 경계로 세요 (시간 차로 세면 어제 23시가 "0일 전" 이 돼요)
+  const day = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const days = Math.round((day(new Date()) - day(then)) / 86_400_000);
+  if (days <= 0) return "오늘 확인한 정보예요";
+  if (days === 1) return "어제 확인한 정보예요";
+  if (days < 14) return `${days}일 전에 확인한 정보예요`;
+  return `${formatDateKo(then.toISOString().slice(0, 10))}에 확인한 정보예요`;
 }
 
 /** 예약 버튼 하나 — 관리자가 넣은 예약 링크가 있으면 그걸, 없으면 네이버 검색 */
