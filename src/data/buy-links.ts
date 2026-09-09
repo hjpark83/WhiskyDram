@@ -54,6 +54,31 @@ function searchTerm(w: Whisky): string {
   return w.nameKo === w.name ? w.name : `${w.nameKo} ${w.name}`;
 }
 
+/**
+ * 시세 검색은 구글로, **영문 이름으로** 물어봐요.
+ *
+ * 예전엔 네이버에 한글 이름으로 물어봤어요. 그러면 국내 블로그 글만 나와서
+ * 두 가지가 빠졌어요 — **해외 판매점 가격**(Master of Malt·The Whisky Exchange·
+ * Whiskybase 같은 곳)과, 국내에 아직 안 들어온 병이에요. 이 사전에는 국내에
+ * 정식 수입되지 않은 병도 있어서(파리에서 마신 프렌치 위스키처럼) 한글 이름으로는
+ * 검색 결과가 아예 안 나오는 경우가 있어요.
+ *
+ * 구글은 한국 페이지도 같이 물어와서 국내 시세를 잃지도 않아요.
+ *
+ * 영문 이름만 넣는 이유: 한글 이름을 같이 넣으면 검색어가 한국어 쪽으로
+ * 쏠려서 해외 판매점이 다시 밀려요. 해외 가격을 보는 게 목적이니까 영문만요.
+ *
+ * `whisky` 를 붙이는 건 동명이인 때문이에요 — Macallan·Glenlivet 처럼
+ * 지명이기도 한 이름이 많아서, 안 붙이면 관광 정보가 먼저 나와요.
+ *
+ * **해외 가격은 참고용이에요.** 한국은 개인이 주류를 국제 배송으로 들여올 수
+ * 없어요 (주류 수입은 면허가 필요해요). 여행 중에 사거나 면세점에서 살 때,
+ * 그리고 "이 병이 국내에서 비싸게 팔리는 건가" 를 가늠할 때 쓰는 값이에요.
+ */
+function googlePriceUrl(w: Whisky): string {
+  return `https://www.google.com/search?q=${q(`${w.name} whisky price`)}`;
+}
+
 export function buyLinks(w: Whisky): BuyLink[] {
   const term = searchTerm(w);
   const links: BuyLink[] = [
@@ -71,9 +96,9 @@ export function buyLinks(w: Whisky): BuyLink[] {
     },
     {
       kind: "search",
-      label: "네이버에서 시세 보기",
-      hint: "판매 글이 아니라 참고용이에요. 실제 매장 가격은 아래 제보 시세를 봐주세요.",
-      url: `https://search.naver.com/search.naver?query=${q(`${term} 가격`)}`,
+      label: "구글에서 시세 보기",
+      hint: "해외 판매점 가격까지 같이 나와요. 국내 시세는 아래 제보 시세를, 실제 매장 가격은 데일리샷을 봐주세요.",
+      url: googlePriceUrl(w),
     },
   ];
 

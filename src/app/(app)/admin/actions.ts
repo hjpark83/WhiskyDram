@@ -4,12 +4,15 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { SEED_POPUPS } from "@/data/popups";
 import {
+  recheckPopup,
   researchErrorMessage,
   researchPopups,
   whiskyIdsForBrand,
   type PopupDraft,
   type ResearchReport,
 } from "@/lib/ai/popup-research";
+import { applyChanges, diffRecheck, snapshot } from "@/lib/popup/recheck";
+import { getPopup } from "@/lib/popup/store";
 import { getWhisky } from "@/data/whiskies";
 import { getAdminUser } from "@/lib/auth/admin";
 import { searchCommons, type CommonsPhoto } from "@/lib/whisky/commons";
@@ -658,4 +661,113 @@ export async function removeAdminEmail(formData: FormData): Promise<void> {
   }
 
   revalidatePath("/admin/admins");
+}
+
+// ---------------------------------------------------------------------------
+// 팝업 재확인 (주기적으로 웹에서 다시 보고, 바뀐 것만 제안으로 쌓아요)
+// ---------------------------------------------------------------------------
+
+/**
+ * 팝업 하나를 지금 다시 확인해요.
+ *
+ * 값을 바로 고치지 않고 **제안**으로 저장해요 (`pending_recheck`).
+ * 공개된 정보를 AI 가 말없이 바꾸면, 사람이 확인하고 공개한다는 원칙이
+ * 무의미해지니까요. 자세한 이유는 `src/lib/popup/recheck.ts` 주석에 있어요.
+ */
+export async function recheckOne(_prev: AdminState, formData: FormData): Promise<AdminState> {
+  const admin = await getAdminUser();
+  if (!admin) return { error: "관리자만 할 수 있어요." };
+  const id = (formData.get("id") as string | null)?.trim();
+  if (!id) return { error: "어떤 팝업인지 알 수 없어요." };
+
+  const popup = await getPopup(id, { includeUnpublished: true });
+  if (!popup) return { error: "그 팝업을 찾지 못했어요." };
+  if (popup.source === "seed") {
+    // 시드는 코드에 있는 예시라 DB 에 쓸 행이 없어요
+    return { error: "예시 팝업은 재확인할 수 없어요. 먼저 대시보드에서 DB로 복사해주세요." };
+  }
+
+  let pending;
+  try {
+    pending = diffRecheck(popup, await recheckPopup(snapshot(popup)));
+  } catch (error) {
+    return { error: researchErrorMessage(error) };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("popup_stores")
+    .update({ last_checked_at: pending.checkedAt, pending_recheck: pending })
+    .eq("id", id);
+  if (error) return { error: `저장에 실패했어요: ${error.message}` };
+
+  revalidatePath("/admin/popups");
+  revalidatePath(`/admin/popups/${id}`);
+  revalidatePath(`/popup/${id}`);
+
+  if (pending.notFound) return { message: "웹에서 이 행사를 찾지 못했어요. 값은 그대로 뒀어요." };
+  if (pending.changes.length === 0) return { message: "확인했어요. 바뀐 게 없어요." };
+  return { message: `바뀐 것 ${pending.changes.length}개를 찾았어요. 아래에서 확인하고 적용해주세요.` };
+}
+
+/** 제안 중 고른 것만 실제 값에 반영해요 */
+export async function applyRecheck(_prev: AdminState, formData: FormData): Promise<AdminState> {
+  const admin = await getAdminUser();
+  if (!admin) return { error: "관리자만 할 수 있어요." };
+  const id = (formData.get("id") as string | null)?.trim();
+  if (!id) return { error: "어떤 팝업인지 알 수 없어요." };
+
+  const popup = await getPopup(id, { includeUnpublished: true });
+  const pending = popup?.pendingRecheck;
+  if (!popup || !pending) return { error: "적용할 제안이 없어요." };
+
+  // 체크된 것만. 관리자가 "종료일은 맞는데 장소는 아니다" 를 가를 수 있어야 해요.
+  const picked = pending.changes.filter((c) => formData.get(`pick-${c.field}`) === "on");
+  if (picked.length === 0) return { error: "적용할 항목을 골라주세요." };
+
+  const patch = applyChanges(picked);
+  if (Object.keys(patch).length === 0) return { error: "적용할 수 있는 값이 없어요." };
+
+  // 기간을 고칠 때는 시작·종료가 뒤집히지 않는지 봐요 (DB 제약에 걸려요)
+  const start = patch.start_date ?? popup.startDate;
+  const end = patch.end_date ?? popup.endDate;
+  if (end < start) {
+    return { error: `종료일(${end})이 시작일(${start})보다 앞서요. 둘 다 골라서 함께 적용해주세요.` };
+  }
+
+  // 남은 제안만 유지 — 고르지 않은 항목은 다음에 다시 볼 수 있게 남겨둬요
+  const rest = pending.changes.filter((c) => !picked.some((p) => p.field === c.field));
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("popup_stores")
+    .update({
+      ...patch,
+      pending_recheck: rest.length > 0 ? { ...pending, changes: rest } : null,
+    })
+    .eq("id", id);
+  if (error) return { error: `저장에 실패했어요: ${error.message}` };
+
+  revalidatePath("/admin/popups");
+  revalidatePath(`/admin/popups/${id}`);
+  revalidatePath("/popup");
+  revalidatePath(`/popup/${id}`);
+  return {
+    message:
+      rest.length > 0
+        ? `${picked.length}개를 반영했어요. 고르지 않은 ${rest.length}개는 남겨뒀어요.`
+        : `${picked.length}개를 반영했어요.`,
+  };
+}
+
+/** 제안을 버려요 (값은 그대로). 확인 시각은 남겨서 바로 또 재확인하지 않게 해요. */
+export async function dismissRecheck(formData: FormData): Promise<void> {
+  const admin = await getAdminUser();
+  if (!admin) return;
+  const id = (formData.get("id") as string | null)?.trim();
+  if (!id) return;
+
+  const supabase = await createClient();
+  await supabase.from("popup_stores").update({ pending_recheck: null }).eq("id", id);
+  revalidatePath("/admin/popups");
+  revalidatePath(`/admin/popups/${id}`);
 }

@@ -207,3 +207,151 @@ export function researchErrorMessage(error: unknown): string {
   if (err.kind === "rate_limit") return "요청이 많아요. 잠시 후 다시 시도해주세요.";
   return `검색에 실패했어요: ${err.message.slice(0, 200)}`;
 }
+
+// ---------------------------------------------------------------------------
+// 저장해둔 팝업 다시 확인하기
+// ---------------------------------------------------------------------------
+
+/**
+ * 이미 저장한 팝업 **한 건**을 웹에서 다시 확인해요.
+ *
+ * ## 왜 따로 만드나
+ *
+ * `researchPopups()` 는 "이 브랜드의 팝업을 찾아줘" 라 무엇이 나올지 몰라요.
+ * 재확인은 반대예요 — **어떤 행사인지 이미 알고**, 우리가 적어둔 값이 아직
+ * 맞는지만 봐요. 그래서 프롬프트에 지금 값을 넣고 "이게 맞나" 를 물어요.
+ * 이렇게 물으면 같은 행사를 다시 찾아 헤매지 않고, 답도 비교하기 쉬워요.
+ *
+ * ## 설명·프로그램은 다시 안 물어봐요
+ *
+ * 기간·시간·장소·입장료·예약 방법만 봐요. 설명글은 표현이 매번 조금씩 달라져서
+ * 매번 "바뀌었다" 로 잡히는데, 정작 사용자에게는 아무 차이가 없어요. 헛제안이
+ * 쌓이면 관리자가 제안을 안 보게 돼요.
+ */
+export interface PopupCheck {
+  /** 웹에서 이 행사를 찾았는지. false 면 아무 것도 제안하지 않아요 */
+  found: boolean;
+  /** 이미 끝난 행사로 보이는지 */
+  ended: boolean;
+  startDate: string;
+  endDate: string;
+  hours: string;
+  entry: string;
+  venue: string;
+  address: string;
+  reservation: "catchtable" | "naver" | "instagram" | "walkin" | "";
+  sources: string[];
+  confidence: "high" | "medium" | "low";
+  note: string;
+  provider: string;
+  model: string;
+}
+
+/** 재확인에 넘길 지금 값 (PopupRecord 를 그대로 받지 않으려고 최소한만) */
+export interface PopupSnapshot {
+  brand: string;
+  title: string;
+  venue: string;
+  city: string;
+  address: string;
+  startDate: string;
+  endDate: string;
+  hours: string;
+  entry: string;
+  reservation: string;
+  sources: string[];
+}
+
+function recheckPrompt(p: PopupSnapshot): string {
+  return [
+    `오늘은 ${today()} 입니다.`,
+    `아래 위스키 팝업 행사가 **지금도 그대로인지** 웹에서 확인해주세요.`,
+    "",
+    "## 우리가 갖고 있는 정보",
+    `- 브랜드: ${p.brand}`,
+    `- 행사: ${p.title}`,
+    p.venue || p.city ? `- 장소: ${[p.city, p.venue].filter(Boolean).join(" ")}` : "",
+    p.address ? `- 주소: ${p.address}` : "",
+    p.startDate && p.endDate ? `- 기간: ${p.startDate} ~ ${p.endDate}` : "",
+    p.hours ? `- 운영 시간: ${p.hours}` : "",
+    p.entry ? `- 입장료: ${p.entry}` : "",
+    p.sources.length > 0 ? `- 전에 본 출처: ${p.sources.join(", ")}` : "",
+    "",
+    "## 확인할 것",
+    "- 기간이 바뀌었나요? (연장·단축·조기 종료)",
+    "- 운영 시간, 입장료, 장소, 예약 방법이 바뀌었나요?",
+    "- 이미 끝난 행사인가요?",
+    "",
+    "바뀐 게 없으면 '그대로' 라고 알려주세요. 확인이 안 되는 항목은 추측하지 말고",
+    "'확인 안 됨' 이라고 쓰세요. 각 정보를 어디서 봤는지 URL 을 함께 적어주세요.",
+    "이 행사를 웹에서 아예 못 찾았으면 '못 찾음' 이라고 분명히 써주세요.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+const RECHECK_SYSTEM = `당신은 조사 메모에서 행사 정보를 그대로 옮기는 사람이에요.
+
+원칙:
+- 메모에 적힌 사실만 옮겨요. 메모에 없는 날짜·주소·가격을 만들어내지 마세요.
+- **확인되지 않은 항목은 빈 문자열로 두세요.** 이게 가장 중요해요. 빈 문자열은
+  "모르겠다" 로 처리돼서 기존 값이 그대로 유지돼요. 반대로 추측해서 채우면
+  맞는 정보가 틀린 정보로 덮여요.
+- 메모가 "그대로" 라고 하면, 확인된 값을 그대로 옮겨 적어요 (빈 칸이 아니라).
+- 행사를 못 찾았으면 found = false. 이때 다른 값은 모두 빈 문자열로.
+- startDate / endDate 는 YYYY-MM-DD 형식만.
+- note 는 관리자가 알아야 할 것 한 문장. 없으면 빈 문자열.`;
+
+export async function recheckPopup(p: PopupSnapshot): Promise<PopupCheck> {
+  const provider = activeProvider();
+  if (!provider) throw new Error("AI 키가 설정되어 있지 않아요.");
+
+  const research = await researchWeb(recheckPrompt(p));
+
+  const Schema = z.object({
+    found: z.boolean().describe("이 행사를 웹에서 찾았는지."),
+    ended: z.boolean().describe("이미 끝난 행사로 보이는지."),
+    startDate: z.string().describe("YYYY-MM-DD. 확인 안 되면 빈 문자열."),
+    endDate: z.string().describe("YYYY-MM-DD. 확인 안 되면 빈 문자열."),
+    hours: z.string().describe("운영 시간. 확인 안 되면 빈 문자열."),
+    entry: z.string().describe("입장료·구성. 확인 안 되면 빈 문자열."),
+    venue: z.string().describe("장소 이름. 확인 안 되면 빈 문자열."),
+    address: z.string().describe("주소. 확인 안 되면 빈 문자열."),
+    reservation: z
+      .enum(["catchtable", "naver", "instagram", "walkin", ""])
+      .describe("예약 방법. 확인 안 되면 빈 문자열."),
+    sources: z.array(z.string()).max(5).describe("근거 URL. 메모에 나온 것만."),
+    confidence: z.enum(["high", "medium", "low"]),
+    note: z.string().describe("관리자가 알아야 할 것 한 문장. 없으면 빈 문자열."),
+  });
+
+  const { data } = await generateJson({
+    system: RECHECK_SYSTEM,
+    user: [
+      `오늘은 ${today()} 입니다.`,
+      "",
+      "## 확인한 행사",
+      `${p.brand} — ${p.title}`,
+      "",
+      "## 조사 메모",
+      research.text || "(내용 없음)",
+      "",
+      "## 검색에서 나온 출처",
+      research.sources.map((s) => `- ${s.title}: ${s.url}`).join("\n") || "(없음)",
+    ].join("\n"),
+    schema: Schema,
+    schemaName: "popup_recheck",
+    maxTokens: 2000,
+    effort: "low",
+  });
+
+  return {
+    ...data,
+    // 형식이 어긋난 날짜는 "모르겠다" 로 (그럴듯한 날짜를 그대로 받지 않아요)
+    startDate: ISO_DATE.test(data.startDate) ? data.startDate : "",
+    endDate: ISO_DATE.test(data.endDate) ? data.endDate : "",
+    sources: data.sources.filter((u) => /^https?:\/\//i.test(u)),
+    provider: research.provider,
+    model: research.model,
+  };
+}

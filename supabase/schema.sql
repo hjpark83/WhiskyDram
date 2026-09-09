@@ -230,6 +230,24 @@ alter table public.popup_stores add column if not exists sources jsonb not null 
 alter table public.popup_stores add column if not exists ai_note text;
 alter table public.popup_stores add column if not exists image_url text not null default '';
 
+-- 주기적 재확인 (팝업은 기간·시간이 바뀌는 일이 잦아요)
+--
+-- 왜 바로 덮어쓰지 않나: 공개된 정보를 AI 가 말없이 바꾸면, 관리자가 확인해서
+-- 공개한다는 원칙이 무의미해져요. 그래서 재확인 결과는 **제안**으로 쌓아두고
+-- 관리자가 보고 적용해요.
+--
+--   last_checked_at : 마지막으로 재확인을 돌린 시각 (updated_at 과 다름 —
+--                     updated_at 은 색만 바꿔도 갱신되니 "확인 날짜" 로 못 써요)
+--   pending_recheck : 아직 적용하지 않은 변경 제안
+--                     { checkedAt, changes:[{field,label,from,to}], sources, note,
+--                       confidence, ended }
+alter table public.popup_stores add column if not exists last_checked_at timestamptz;
+alter table public.popup_stores add column if not exists pending_recheck jsonb;
+
+-- 재확인 대상 고르기용 (오래 확인 안 한 것부터)
+create index if not exists popup_stores_recheck_idx
+  on public.popup_stores (last_checked_at nulls first);
+
 create index if not exists popup_stores_period_idx on public.popup_stores (end_date desc, start_date desc);
 
 alter table public.popup_stores enable row level security;

@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/popups/recheck",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}

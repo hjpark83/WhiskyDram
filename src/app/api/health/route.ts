@@ -32,14 +32,14 @@ async function schemaReady() {
     const [profilesPersona, priceReports, popupStores, admins] = await Promise.all([
       probe("profiles", "age_band, drink_scenes, likes_note"),
       probe("price_reports", "id"),
-      probe("popup_stores", "id"),
+      probe("popup_stores", "id, last_checked_at, pending_recheck"),
       probe("admins", "user_id"),
     ]);
 
     const missing = [
       profilesPersona === false && "profiles 의 내 정보 칸 (age_band 등)",
       priceReports === false && "price_reports 표 (위스키 시세)",
-      popupStores === false && "popup_stores 표 (팝업 스토어)",
+      popupStores === false && "popup_stores 표 또는 재확인 칸 (last_checked_at · pending_recheck)",
       admins === false && "admins 표 (관리자)",
     ].filter(Boolean);
 

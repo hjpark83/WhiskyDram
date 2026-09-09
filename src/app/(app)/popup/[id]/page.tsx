@@ -19,7 +19,14 @@ import { PopupStatusBadge } from "@/components/popup/popup-card";
 import { WhiskyCard } from "@/components/whisky/whisky-card";
 import { LINK_LABELS_KO, RESERVATION_LABELS_KO } from "@/data/popups";
 import { getWhisky } from "@/data/whiskies";
-import { formatPeriod, popupStatus, reservationLink, resolveLinks, statusNote } from "@/lib/popup/format";
+import {
+  checkedAtText,
+  formatPeriod,
+  popupStatus,
+  reservationLink,
+  resolveLinks,
+  statusNote,
+} from "@/lib/popup/format";
 import { getPopup, listPopups } from "@/lib/popup/store";
 import { createClient } from "@/lib/supabase/server";
 import { hasProfile, matchPercent } from "@/lib/whisky/recommend";
@@ -52,7 +59,11 @@ export default async function PopupDetailPage({ params }: PageProps<"/popup/[id]
   }
 
   const whiskies = popup.whiskyIds.map((wid) => getWhisky(wid)).filter((w): w is NonNullable<typeof w> => Boolean(w));
-  const links = resolveLinks(popup);
+  // 근거가 있으면 "네이버에서 찾아보세요" 검색 링크를 만들지 않아요 (resolveLinks 주석 참고)
+  const links = resolveLinks(popup, { hasSources: popup.sources.length > 0 });
+  // "언제 확인한 정보" 는 재확인 시각이 정답이에요. updatedAt 은 색만 바꿔도
+  // 갱신돼서 실제보다 최신처럼 보여요. 재확인을 아직 안 돌린 팝업만 updatedAt 로.
+  const checked = checkedAtText(popup.lastCheckedAt ?? popup.updatedAt);
   const booking = reservationLink(popup);
   const status = popupStatus(popup);
 
@@ -96,8 +107,8 @@ export default async function PopupDetailPage({ params }: PageProps<"/popup/[id]
         <div className="flex gap-2.5 rounded-xl border border-dashed border-amber-400/30 bg-amber-500/5 p-4 text-sm">
           <Info className="mt-0.5 size-4 shrink-0 text-amber-300" aria-hidden />
           <p className="text-amber-50/85">
-            이 팝업은 화면 확인용 <strong className="font-semibold">예시</strong>예요. 기간·장소·가격은 실제
-            발표된 정보가 아니니, 아래 네이버·인스타그램 링크에서 최신 정보를 확인해주세요.
+            이 팝업은 화면 확인용 <strong className="font-semibold">예시</strong>예요. 기간·장소·가격이 실제
+            발표된 정보가 아니라서, 이 카드만은 아래 링크에서 직접 확인해주세요.
           </p>
         </div>
       )}
@@ -121,6 +132,14 @@ export default async function PopupDetailPage({ params }: PageProps<"/popup/[id]
               {RESERVATION_LABELS_KO[popup.reservation]}
             </span>
           </InfoRow>
+          {checked && (
+            /*
+              정리해둔 정보는 오래되면 링크보다 나빠져요 — 우리 이름으로 틀린 기간을
+              보여주는 거니까요. 언제 확인한 정보인지 적어서 사용자가 스스로 수명을
+              판단하게 해요.
+            */
+            <p className="text-xs text-muted-foreground sm:col-span-2">{checked}</p>
+          )}
         </CardContent>
       </Card>
 
@@ -149,8 +168,9 @@ export default async function PopupDetailPage({ params }: PageProps<"/popup/[id]
         <div className="flex gap-2.5 rounded-xl border border-amber-400/25 bg-amber-500/5 p-4 text-sm">
           <Info className="mt-0.5 size-4 shrink-0 text-amber-300" aria-hidden />
           <p className="text-amber-50/85">
-            이 정보는 AI가 웹에서 찾아 정리하고 관리자가 확인한 거예요. 방문 전에 아래 출처에서 기간과
-            장소를 한 번 더 확인해주세요.
+            이 정보는 AI가 웹에서 찾아 정리하고 관리자가 확인한 거예요. 팝업은 기간이 바뀌는 일이
+            잦아서, 가기 전에 아래 <strong className="font-semibold">출처</strong>에서 한 번 더
+            확인해주세요.
           </p>
         </div>
       )}
@@ -158,7 +178,8 @@ export default async function PopupDetailPage({ params }: PageProps<"/popup/[id]
       <section className="space-y-3">
         <h2 className="text-xl text-amber-100">예약하고 더 알아보기</h2>
         <p className="text-xs text-muted-foreground">
-          캐치테이블·네이버는 공개 API가 없어서 정보를 가져오지 않고 해당 페이지로 이어줘요. 새 창에서 열려요.
+          위에 적어둔 기간·시간·입장 정보가 우리가 정리해둔 내용이에요. 아래 링크는 <strong>예약</strong>과{" "}
+          <strong>원문 확인</strong>용이에요. 새 창에서 열려요.
         </p>
         <div className="flex flex-wrap gap-2">
           {booking && (
@@ -228,7 +249,7 @@ export default async function PopupDetailPage({ params }: PageProps<"/popup/[id]
 
       {status === "ended" && (
         <p className="rounded-xl border border-amber-400/20 bg-amber-500/5 p-4 text-sm text-muted-foreground">
-          이 팝업은 끝났어요. 같은 브랜드가 또 열 수 있으니 네이버 링크를 저장해두면 편해요.
+          이 팝업은 끝났어요. 같은 브랜드가 또 열면 여기 올려둘게요.
         </p>
       )}
 
