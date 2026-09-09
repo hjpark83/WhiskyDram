@@ -200,11 +200,26 @@ export async function researchPopups(input: {
   };
 }
 
-/** 화면에 띄울 오류 문구 */
+/**
+ * 화면에 띄울 오류 문구.
+ *
+ * 한도(429)일 때 "요청이 많아요" 로만 말하면 안 돼요 — **분당 한도면 30초 뒤에
+ * 되고, 하루 한도면 내일까지 안 되는데** 둘을 구분할 수가 없어서 계속 눌러보게
+ * 돼요. 프로바이더가 알려주는 안내(`gemini.ts` 의 `quotaHint`)를 그대로 실어요.
+ *
+ * 웹 검색은 특히 한도에 잘 걸려요. 한 번 누르면 **검색 그라운딩 + 구조화 추출로
+ * 두 번** 부르고, 그라운딩 호출 자체가 일반 호출보다 무겁거든요.
+ */
 export function researchErrorMessage(error: unknown): string {
   const err = toAiError(error);
   if (err.kind === "auth") return "AI 키 설정을 확인해주세요. 웹 검색은 키가 있어야 돼요.";
-  if (err.kind === "rate_limit") return "요청이 많아요. 잠시 후 다시 시도해주세요.";
+  if (err.kind === "rate_limit") {
+    // 괄호 안 안내만 뽑아서 보여줘요 (원문 JSON 은 화면에 쓸모가 없어요)
+    const hint = /\(([^)]+)\)/.exec(err.message)?.[1];
+    return hint
+      ? `AI 사용 한도에 걸렸어요. ${hint}`
+      : "AI 사용 한도에 걸렸어요. 30초쯤 뒤에 다시 눌러주세요.";
+  }
   return `검색에 실패했어요: ${err.message.slice(0, 200)}`;
 }
 

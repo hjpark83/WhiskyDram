@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Whiskipedia — 발표 자료</title>
+<style>
+  /*
+    발표 슬라이드. 파일 하나로 끝나요 — 인터넷 없이도 열려요.
+    무대에서 CDN 이 안 열려 슬라이드가 안 뜨는 것만큼 허무한 게 없어서
+    폰트·스크립트를 밖에서 안 가져와요.
+
+    조작: → / ← / Space, 숫자키로 점프, F 전체화면, P 인쇄(PDF)
+  */
+  :root {
+    --bg: #14110d;
+    --ink: #f6efe3;
+    --dim: #a99e8c;
+    --gold: #f0a92b;
+    --gold-soft: #f5d18a;
+    --line: rgba(240, 169, 43, 0.22);
+    --card: rgba(255, 255, 255, 0.04);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+    overflow: hidden;
+  }
+  .slide {
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column; justify-content: center;
+    padding: 6vh 8vw;
+    animation: in 0.35s ease both;
+  }
+  .slide[data-on] { display: flex; }
+  @keyframes in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+  h1 { font-size: clamp(2.4rem, 6vw, 4.6rem); margin: 0 0 0.3em; line-height: 1.08; letter-spacing: -0.02em; }
+  h2 { font-size: clamp(1.6rem, 3.6vw, 2.9rem); margin: 0 0 0.7em; line-height: 1.2; color: var(--gold-soft); }
+  p, li { font-size: clamp(1rem, 1.7vw, 1.45rem); line-height: 1.65; margin: 0 0 0.6em; }
+  .dim { color: var(--dim); }
+  .gold { color: var(--gold); }
+  strong { color: var(--gold-soft); font-weight: 600; }
+  ul { padding-left: 1.1em; margin: 0; }
+  li { margin-bottom: 0.55em; }
+  li::marker { color: var(--gold); }
+
+  .rule { height: 2px; width: 5rem; background: linear-gradient(90deg, var(--gold), transparent); margin: 0 0 1.6rem; }
+  .kicker { font-size: clamp(0.8rem, 1.2vw, 1rem); letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim); margin-bottom: 1rem; }
+
+  .grid { display: grid; gap: 1.1rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); margin-top: 0.6rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 1.2rem 1.3rem; }
+  .card h3 { margin: 0 0 0.45em; font-size: clamp(1rem, 1.5vw, 1.25rem); color: var(--gold-soft); }
+  .card p { font-size: clamp(0.88rem, 1.15vw, 1.05rem); margin: 0; color: var(--dim); line-height: 1.55; }
+
+  .stats { display: grid; gap: 1.4rem; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); margin-top: 1rem; }
+  .stat b { display: block; font-size: clamp(2.1rem, 5vw, 3.6rem); color: var(--gold); line-height: 1; font-weight: 600; }
+  .stat span { color: var(--dim); font-size: clamp(0.85rem, 1.2vw, 1.05rem); }
+
+  .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 0.7rem; margin-top: 0.8rem; }
+  .flow span { border: 1px solid var(--line); border-radius: 999px; padding: 0.5em 1.1em; font-size: clamp(0.85rem, 1.3vw, 1.15rem); }
+  .flow i { color: var(--gold); font-style: normal; }
+
+  .quote { border-left: 3px solid var(--gold); padding-left: 1.2rem; color: var(--dim); font-style: italic; }
+
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255,255,255,0.07); }
+  .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-soft)); transition: width 0.3s; }
+  .num { position: fixed; right: 1.6rem; bottom: 1.2rem; color: var(--dim); font-size: 0.8rem; letter-spacing: 0.1em; }
+  .help { position: fixed; left: 1.6rem; bottom: 1.1rem; color: var(--dim); font-size: 0.72rem; opacity: 0.55; }
+
+  /* 인쇄(PDF) 할 때는 전부 펼쳐서 한 장씩 */
+  @media print {
+    body { overflow: visible; background: #fff; }
+    .slide { position: static; display: flex !important; page-break-after: always; height: 100vh; animation: none; }
+    .bar, .num, .help { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<section class="slide" data-on>
+  <div class="kicker">Wanted AI Challenge 2026</div>
+  <h1>🥃 Whiskipedia<br /><span class="gold">위스키피디아</span></h1>
+  <div class="rule"></div>
+  <p style="font-size: clamp(1.1rem, 2.2vw, 1.8rem)">내 취향을 아는 위스키 사전</p>
+  <p class="dim">전문가의 언어로 쓰인 위스키를, 초보자의 언어로 다시 씁니다.</p>
+</section>
+
+<section class="slide">
+  <div class="kicker">문제</div>
+  <h2>정보가 없는 게 아니라,<br />읽어도 이해가 안 되는 것</h2>
+  <div class="rule"></div>
+  <p class="quote">"피티한 노즈에 셰리 캐스크의 다크 프룻, 롱 피니시"</p>
+  <p>위스키를 시작하려는 사람이 검색하면 만나는 문장이에요. 정보는 넘치는데 <strong>전부 이미 아는 사람을 위한 언어</strong>로 쓰여 있어요.</p>
+  <p class="dim">그래서 뭘 사야 할지 모르고, 아무거나 사서 실패하고, 위스키는 어렵다고 결론 내려요.</p>
+</section>
+
+<section class="slide">
+  <div class="kicker">해결</div>
+  <h2>아는 것만 물어보고,<br />마실수록 정확해져요</h2>
+  <div class="rule"></div>
+  <div class="flow">
+    <span>커피·디저트 취향 17문항</span><i>→</i>
+    <span>취향 벡터</span><i>→</i>
+    <span>입문 3병 추천</span><i>→</i>
+    <span>마시고 한 줄 후기</span><i>↺</i>
+  </div>
+  <p style="margin-top:1.4rem">위스키 용어를 하나도 묻지 않아요. <strong>라떼를 좋아하는지, 연기 냄새가 싫은지</strong>만 물어봐요.</p>
+  <p class="dim">후기 한 줄이 취향 벡터를 갱신하고, 다음 추천이 달라져요. 마실수록 사전이 나를 알아가요.</p>
+</section>
+
+<section class="slide">
+  <div class="kicker">핵심 구조</div>
+  <h2>기능이 따로 놀지 않아요</h2>
+  <div class="rule"></div>
+  <p>취향 프로필과 위스키 향미가 <strong>같은 7개 축</strong>을 씁니다 — 피트 · 과일 · 단맛 · 스파이스 · 꽃 · 오크 · 바디.</p>
+  <div class="grid">
+    <div class="card"><h3>취향 진단</h3><p>답변 → 축 점수. 질문 수가 늘면 눈금이 자동으로 조정돼요.</p></div>
+    <div class="card"><h3>병 스캔</h3><p>인식한 병을 같은 축으로 비교해 "내 취향 87%" 를 그 자리에서.</p></div>
+    <div class="card"><h3>후기 한 줄</h3><p>자유 텍스트 → 축 델타 추출 → 프로필 갱신 → 재추천.</p></div>
+  </div>
+  <p class="dim" style="margin-top:1.2rem">그래서 어느 기능을 쓰든 <strong>하나의 취향</strong>이 정확해져요.</p>
+</section>
+
+<section class="slide">
+  <div class="kicker">차별점 1</div>
+  <h2>AI가 뭘 보고 판단했는지<br />보여줘요</h2>
+  <div class="rule"></div>
+  <p>병 스캔은 결과만 주지 않고, <strong>라벨 사진 위에 "여기서 이걸 읽었어요"</strong> 를 그려요. 브랜드·숙성 연수·도수를 각각 어디서 봤는지 좌표로 받아 상자를 띄워요.</p>
+  <p class="dim">AI가 틀릴 수 있다는 걸 감추지 않고, 사용자가 믿을지 말지 정할 수 있게 근거를 내놓는 쪽을 골랐어요.</p>
+  <p class="dim">모델이 좌표를 뒤집어 주는 경우가 있어서 걸러내요 — 엉뚱한 자리에 상자가 뜨면 안 그리느니만 못하니까요.</p>
+</section>
+
+<section class="slide">
+  <div class="kicker">차별점 2</div>
+  <h2>AI를 믿지 않는 설계</h2>
+  <div class="rule"></div>
+  <div class="grid">
+    <div class="card"><h3>사람이 확인해야 공개</h3><p>AI가 웹에서 찾은 팝업 정보는 비공개 초안으로 저장되고, 관리자가 출처를 보고 확인해야 올라가요.</p></div>
+    <div class="card"><h3>모르면 비워둬요</h3><p>기간을 확인 못 하면 그럴듯한 날짜를 지어내지 않고 빈칸으로 둬요.</p></div>
+    <div class="card"><h3>출처와 확인 날짜</h3><p>공개된 화면에도 근거 링크와 "3일 전에 확인한 정보예요" 가 같이 나와요.</p></div>
+    <div class="card"><h3>매일 다시 확인</h3><p>정리해둔 정보는 낡아요. 매일 재확인해 바뀐 것만 제안으로 쌓고, 적용은 사람이 골라서.</p></div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="kicker">차별점 3</div>
+  <h2>한국에서 실제로 되는 것만</h2>
+  <div class="rule"></div>
+  <p>한국은 <strong>주류 통신판매가 원칙적으로 금지</strong>예요. 그래서 마트가 위스키 가격을 웹에 올리지 않아요 — <strong>긁어올 원본 자체가 없어요.</strong></p>
+  <ul>
+    <li>크롤링 대신 <strong>사용자 제보</strong>로 시세를 모아요. 애호가들이 원래 그렇게 해왔으니까요.</li>
+    <li>용량이 다르면 비교가 안 되니 <strong>700ml 기준 환산</strong>. 평균이 아니라 <strong>중간값</strong> — 면세점 한 건이 시세를 끌어당기면 안 되니까요.</li>
+    <li>구매는 합법 경로인 <strong>스마트오더</strong>(온라인 주문 · 매장 수령)로만 이어줘요.</li>
+  </ul>
+</section>
+
+<section class="slide">
+  <div class="kicker">기술</div>
+  <h2>AI가 죽어도<br />서비스는 살아 있어요</h2>
+  <div class="rule"></div>
+  <p><strong>프로바이더 3종을 환경변수 하나로 교체</strong>해요 — Claude · ChatGPT · Gemini. 기능 코드는 손대지 않아요. 모든 AI 호출이 <code>generateJson()</code> · <code>streamTurn()</code> · <code>researchWeb()</code> 세 개 위에 올라가 있어요.</p>
+  <p>그리고 <strong>모든 기능에 규칙 기반 폴백</strong>이 있어요. 키가 하나도 없어도 전 화면이 돌아가요.</p>
+  <p class="dim">Next.js 16 · TypeScript · Supabase(Postgres + RLS) · Tailwind v4 · three.js · Vercel</p>
+</section>
+
+<section class="slide">
+  <div class="kicker">검증</div>
+  <h2>읽어서 판단하지 않고<br />돌려서 확인했어요</h2>
+  <div class="rule"></div>
+  <div class="grid">
+    <div class="card"><h3>실제 Postgres</h3><p>스키마 변경마다 진짜 DB를 띄워 멱등성·업그레이드·RLS를 2인 시뮬레이션으로 확인.</p></div>
+    <div class="card"><h3>가짜 Gemini 서버</h3><p>진짜처럼 스키마를 깐깐하게 검사해요. 키 없이도 변환 버그를 잡아냈어요 (실제로 2개).</p></div>
+    <div class="card"><h3>실제 브라우저</h3><p>3D 병·지구본·모바일 레이아웃은 스크린샷으로 눈으로 확인.</p></div>
+    <div class="card"><h3>몬테카를로</h3><p>추천 로직 버그는 3,000회 무작위 답변으로 재현하고 고친 뒤 다시 3,000회.</p></div>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="kicker">지금까지</div>
+  <h2>담긴 것</h2>
+  <div class="rule"></div>
+  <div class="stats">
+    <div class="stat"><b>504</b><span>위스키</span></div>
+    <div class="stat"><b>182</b><span>증류소 (지구본)</span></div>
+    <div class="stat"><b>82</b><span>브랜드 이야기</span></div>
+    <div class="stat"><b>53</b><span>용어 풀이</span></div>
+    <div class="stat"><b>17</b><span>취향 진단 문항</span></div>
+  </div>
+  <p class="dim" style="margin-top:1.6rem">스코틀랜드 292 · 미국 66 · 일본 46 · 아일랜드 32 · <strong>프랑스 26</strong> · 대만 7 · 인도 7 · 한국 5 …</p>
+  <p class="dim">프랑스는 위스키 소비 세계 1위이면서 직접 만들기도 해요 — 메밀로 만드는 병까지 있어요.</p>
+</section>
+
+<section class="slide">
+  <div class="kicker">다음</div>
+  <h2>여기서 더 갈 곳</h2>
+  <div class="rule"></div>
+  <ul>
+    <li><strong>후기로 맛 데이터 보정</strong> — 지금 향미 축은 공식 테이스팅 노트 기반 근사값이에요. 사용자 후기가 쌓이면 이 값을 실제에 맞춰 갱신할 수 있어요.</li>
+    <li><strong>실물 사진 축적</strong> — 스캔한 사진에서 라벨과 액체 색을 뽑아 3D에 입히고 있어요. 사진이 쌓일수록 사전이 실물에 가까워져요.</li>
+    <li><strong>앱스토어</strong> — 지금도 홈 화면에 설치돼요(PWA). 네이티브는 Capacitor 로 이 웹앱을 그대로 감싸면 돼요.</li>
+  </ul>
+</section>
+
+<section class="slide">
+  <h1>사전이지만,<br /><span class="gold">내 취향을 아는</span> 사전</h1>
+  <div class="rule"></div>
+  <p class="dim">Your first dram, chosen for you.</p>
+  <p class="dim" style="margin-top:2rem">🥃 Whiskipedia · Wanted AI Challenge 2026</p>
+</section>
+
+<div class="bar"><i></i></div>
+<div class="num"></div>
+<div class="help">→ ← Space 이동 · F 전체화면 · P 인쇄(PDF)</div>
+
+<script>
+  const slides = [...document.querySelectorAll(".slide")];
+  let at = 0;
+
+  function show(next) {
+    at = Math.max(0, Math.min(slides.length - 1, next));
+    slides.forEach((s, i) => (i === at ? s.setAttribute("data-on", "") : s.removeAttribute("data-on")));
+    document.querySelector(".bar i").style.width = ((at + 1) / slides.length) * 100 + "%";
+    document.querySelector(".num").textContent = at + 1 + " / " + slides.length;
+    // 새로고침해도 보던 장으로 (무대에서 실수로 F5 를 눌러도 처음으로 안 돌아가게)
+    try { location.hash = String(at + 1); } catch {}
+  }
+
+  addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") { e.preventDefault(); show(at + 1); }
+    else if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); show(at - 1); }
+    else if (e.key === "Home") show(0);
+    else if (e.key === "End") show(slides.length - 1);
+    else if (e.key === "f" || e.key === "F") {
+      document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+    } else if (e.key === "p" || e.key === "P") { e.preventDefault(); print(); }
+    else if (/^[1-9]$/.test(e.key)) show(Number(e.key) - 1);
+  });
+
+  // 발표 중에 클릭으로도 넘어가게 (리모컨이 없을 때)
+  addEventListener("click", (e) => show(at + (e.clientX < innerWidth * 0.25 ? -1 : 1)));
+
+  show(Math.max(0, (Number(location.hash.slice(1)) || 1) - 1));
+</script>
+</body>
+</html>
