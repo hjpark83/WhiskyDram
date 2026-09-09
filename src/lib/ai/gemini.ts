@@ -50,6 +50,32 @@ function retryDelayMs(raw: string): number | null {
   return match ? Math.ceil(Number(match[1]) * 1000) : null;
 }
 
+/**
+ * 429 가 **분당** 한도인지 **하루** 한도인지.
+ *
+ * 둘은 대응이 완전히 달라요 — 분당이면 30초 뒤에 되고, 하루면 내일까지 안 돼요.
+ * 그런데 둘 다 그냥 "요청이 많아요" 로만 말하면, 기다리면 될 일인지 결제를 붙여야
+ * 할 일인지 알 수가 없어요. 구글이 `quotaId` 에 적어주는 걸 그대로 읽어요
+ * (예: `GenerateRequestsPerMinutePerProjectPerModel-FreeTier`).
+ */
+export type QuotaScope = "minute" | "day" | null;
+
+function quotaScope(raw: string): QuotaScope {
+  const id = /"quotaId"\s*:\s*"([^"]+)"/.exec(raw)?.[1] ?? "";
+  if (/PerDay/i.test(id)) return "day";
+  if (/PerMinute/i.test(id)) return "minute";
+  return null;
+}
+
+/** 429 안내 문구 — 기다리면 될 일인지, 결제를 붙여야 할 일인지 딱 말해줘요 */
+export function quotaHint(scope: QuotaScope, retryAfterMs: number | null): string {
+  if (scope === "day") {
+    return " (오늘 쓸 수 있는 무료 한도를 다 썼어요 — 한국 시간 오후 4~5시쯤 초기화돼요. 지금 꼭 써야 하면 Google AI Studio 에서 결제를 연결하거나, 다른 프로바이더 키를 넣어주세요)";
+  }
+  const sec = retryAfterMs ? Math.ceil(retryAfterMs / 1000) : null;
+  return ` (분당 한도예요 — ${sec ? `${sec}초` : "30초"}쯤 뒤에 다시 눌러주세요)`;
+}
+
 export function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
 }
@@ -76,12 +102,24 @@ async function callGemini(
 
   // 무료 등급은 분당 요청 수가 빡빡해서, 화면을 두 번 누르기만 해도 429 가 나요.
   // 구글이 알려주는 대기 시간만큼(최대 8초) 한 번만 다시 시도해요.
-  // 하루 한도를 넘긴 경우라면 다시 시도해도 429 라서, 여기서 더 붙잡지 않아요.
+  //
+  // **하루 한도면 다시 시도하지 않아요.** 어차피 또 429 인데 8초를 그냥 버리는 거라,
+  // 사용자는 "왜 이렇게 오래 걸리다 실패하지" 만 겪게 되거든요.
+  let scope: QuotaScope = null;
+  let retryAfter: number | null = null;
   if (res.status === 429) {
     const body429 = await res.clone().text().catch(() => "");
-    const wait = Math.min(8000, retryDelayMs(body429) ?? 3000);
-    await new Promise((r) => setTimeout(r, wait));
-    res = await send();
+    scope = quotaScope(body429);
+    retryAfter = retryDelayMs(body429);
+    if (scope !== "day") {
+      await new Promise((r) => setTimeout(r, Math.min(8000, retryAfter ?? 3000)));
+      res = await send();
+      if (res.status === 429) {
+        const again = await res.clone().text().catch(() => "");
+        scope = quotaScope(again) ?? scope;
+        retryAfter = retryDelayMs(again) ?? retryAfter;
+      }
+    }
   }
 
   if (!res.ok) {
@@ -95,7 +133,7 @@ async function callGemini(
         : res.status === 401 || res.status === 403
           ? " (GEMINI_API_KEY 를 확인해주세요)"
           : res.status === 429
-            ? " (무료 등급은 분당 요청 수가 적어요 — 30초쯤 뒤에 다시 해주세요)"
+            ? quotaHint(scope, retryAfter)
             : "";
     throw new AiError(`Gemini ${res.status}${hint}: ${detail}`, kind, res.status);
   }
