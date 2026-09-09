@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Persona } from "@/data/persona";
 import { personaText } from "@/lib/ai/persona";
-import { activeProvider, generateJson, toAiError } from "@/lib/ai/provider";
+import { activeProvider, generateJson } from "@/lib/ai/provider";
 import {
   profileText,
   templatePick,
@@ -18,6 +18,7 @@ import {
   type ScoredWhisky,
 } from "@/lib/whisky/recommend";
 import { AXIS_LABELS_KO, TASTE_AXES, type TasteProfile, type Whisky } from "@/lib/whisky/types";
+import { noteAiFailure } from "@/lib/ai/failure-log";
 
 /**
  * 프로필에 델타를 얼마나 반영할지.
@@ -187,8 +188,7 @@ export async function generateJournalRecommendation(input: JournalInput): Promis
       },
     };
   } catch (error) {
-    const err = toAiError(error);
-    console.error(`[ai/journal] ${provider.id} 실패 (${err.kind}): ${err.message}`);
+    noteAiFailure("journal", provider.id, error);
     return fallbackJournal(input);
   }
 }

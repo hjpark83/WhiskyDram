@@ -2,7 +2,7 @@ import { z } from "zod";
 import { QUIZ_QUESTIONS, type QuizAnswers } from "@/data/quiz";
 import type { Persona } from "@/data/persona";
 import { personaText } from "@/lib/ai/persona";
-import { activeProvider, generateJson, toAiError } from "@/lib/ai/provider";
+import { activeProvider, generateJson } from "@/lib/ai/provider";
 import {
   applyBounds,
   clampProfile,
@@ -11,6 +11,7 @@ import {
   profileFromAnswers,
 } from "@/lib/whisky/recommend";
 import { AXIS_LABELS_KO, TASTE_AXES, type TasteProfile } from "@/lib/whisky/types";
+import { noteAiFailure } from "@/lib/ai/failure-log";
 
 /**
  * AI 취향 분석.
@@ -124,8 +125,7 @@ export async function analyzeTaste(
       provider: provider.label,
     };
   } catch (error) {
-    const err = toAiError(error);
-    console.error(`[ai/taste] ${provider.id} 실패 (${err.kind}): ${err.message}`);
+    noteAiFailure("taste", provider.id, error);
     return fallbackAnalysis(ruleProfile);
   }
 }

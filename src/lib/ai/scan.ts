@@ -1,9 +1,10 @@
 import { z } from "zod";
-import { activeProvider, generateJson, toAiError } from "@/lib/ai/provider";
+import { activeProvider, generateJson } from "@/lib/ai/provider";
 import { profileText } from "@/lib/ai/recommend";
 import { WHISKIES } from "@/data/whiskies";
 import { hasProfile, matchPercent } from "@/lib/whisky/recommend";
 import type { TasteProfile } from "@/lib/whisky/types";
+import { noteAiFailure } from "@/lib/ai/failure-log";
 
 /** recommendations.payload (source = 'scan') 에 저장되는 형태 */
 /** 라벨에서 읽은 조각 하나 — 무엇을 어디서 읽었는지 */
@@ -156,8 +157,7 @@ export async function scanBottle(input: ScanInput): Promise<ScanPayload> {
       provider: provider.label,
     };
   } catch (error) {
-    const err = toAiError(error);
-    console.error(`[ai/scan] ${provider.id} 실패 (${err.kind}): ${err.message}`);
+    noteAiFailure("scan", provider.id, error);
     return fallbackScan();
   }
 }

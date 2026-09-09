@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
-import { geminiBase, geminiKey } from "@/lib/ai/gemini";
+import { geminiBase, geminiKey, quotaHintFromBody } from "@/lib/ai/gemini";
 import { activeProvider, AiError, toAiError, type ProviderInfo } from "@/lib/ai/provider";
 
 /**
@@ -69,7 +69,13 @@ async function researchGemini(prompt: string, provider: ProviderInfo): Promise<R
 
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
-    throw new AiError(`Gemini 검색 실패: ${detail.slice(0, 300)}`, res.status === 429 ? "rate_limit" : "other", res.status);
+    // 한도(429)면 분당인지 하루인지까지 — callGemini 와 같은 안내를 써요
+    const hint = res.status === 429 ? ` ${quotaHintFromBody(detail)}` : "";
+    throw new AiError(
+      `Gemini 검색 실패:${hint} ${detail.slice(0, 300)}`,
+      res.status === 429 ? "rate_limit" : "other",
+      res.status,
+    );
   }
 
   const body = asRecord(await res.json());

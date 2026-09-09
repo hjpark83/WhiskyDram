@@ -1,9 +1,10 @@
 import { z } from "zod";
 import type { Persona } from "@/data/persona";
 import { personaText } from "@/lib/ai/persona";
-import { activeProvider, generateJson, toAiError } from "@/lib/ai/provider";
+import { activeProvider, generateJson } from "@/lib/ai/provider";
 import { AXIS_LABELS_KO, TASTE_AXES, type TasteProfile, type Whisky } from "@/lib/whisky/types";
 import { describeProfile, type ScoredWhisky } from "@/lib/whisky/recommend";
+import { noteAiFailure } from "@/lib/ai/failure-log";
 import {
   formatPriceRange,
   getOrigin,
@@ -198,8 +199,7 @@ export async function generateQuizRecommendation(
       provider: provider.label,
     };
   } catch (error) {
-    const err = toAiError(error);
-    console.error(`[ai/recommend] ${provider.id} 실패 (${err.kind}): ${err.message}`);
+    noteAiFailure("recommend", provider.id, error);
     return fallbackRecommendation(input);
   }
 }

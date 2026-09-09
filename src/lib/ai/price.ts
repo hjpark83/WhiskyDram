@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { activeProvider, generateJson, toAiError } from "@/lib/ai/provider";
+import { activeProvider, generateJson } from "@/lib/ai/provider";
 import type { Persona } from "@/data/persona";
 import { personaText } from "@/lib/ai/persona";
 import { profileText, whiskyCard } from "@/lib/ai/recommend";
@@ -8,6 +8,7 @@ import type { PriceSummary } from "@/lib/price/types";
 import { STORE_LABELS_KO } from "@/data/stores";
 import { matchPercent, type ScoredWhisky } from "@/lib/whisky/recommend";
 import type { TasteProfile, Whisky } from "@/lib/whisky/types";
+import { noteAiFailure } from "@/lib/ai/failure-log";
 
 /**
  * "이 값이면 살 만한가?" 판정.
@@ -109,8 +110,7 @@ export async function judgePrice(input: {
       model,
     };
   } catch (error) {
-    const aiError = toAiError(error);
-    console.warn(`[ai/price] ${provider.id} 실패 (${aiError.kind}): ${aiError.message}`);
+    noteAiFailure("price", provider.id, error);
     return fallback;
   }
 }
