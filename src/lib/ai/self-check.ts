@@ -18,6 +18,7 @@ import { runChat } from "@/lib/ai/chat";
 import { generateJournalRecommendation } from "@/lib/ai/journal";
 import { researchPopups } from "@/lib/ai/popup-research";
 import { judgePrice } from "@/lib/ai/price";
+import { failureHint, recentFailure } from "@/lib/ai/failure-log";
 import { activeProvider, type ProviderInfo } from "@/lib/ai/provider";
 import { AiError } from "@/lib/ai/provider-shared";
 import { generateQuizRecommendation } from "@/lib/ai/recommend";
@@ -101,9 +102,22 @@ function no(detail: string, hint?: string): Outcome {
   return { ok: false, detail, hint };
 }
 
-/** "폴백으로 떨어졌다" 는 곧 호출이 실패했다는 뜻이라, 서버 로그를 보라고 안내해요. */
-const FALLBACK_HINT =
-  "키는 있는데 호출이 실패해서 규칙 기반 결과로 넘어갔어요. 서버 로그(Vercel → Logs)에 [ai] 로 시작하는 줄을 보면 이유가 나와요.";
+/**
+ * "폴백으로 떨어졌다" 는 곧 호출이 실패했다는 뜻이에요.
+ *
+ * 예전엔 여기서 "서버 로그를 보세요" 라고만 했는데, 그게 사실상 "모르겠어요"
+ * 였어요 — 배포된 앱을 폰으로 확인하는 중이면 Vercel 로그를 열 수가 없거든요.
+ * 실제로 자기점검 네 줄이 전부 같은 429(한도 초과)로 실패했는데, 원문을
+ * 보여주는 팝업 검색 한 줄만 이유를 알려줬어요.
+ *
+ * 이제 방금 그 호출이 남긴 이유(`failure-log.ts`)를 그대로 실어요.
+ */
+function fallbackHint(where: string): string {
+  const hint = failureHint(recentFailure(where));
+  return hint
+    ? `${hint} (규칙 기반 결과로 넘어갔어요)`
+    : "키는 있는데 호출이 실패해서 규칙 기반 결과로 넘어갔어요. 서버 로그(Vercel → Logs)에 [ai] 로 시작하는 줄을 보면 이유가 나와요.";
+}
 
 // ── 개별 점검 ───────────────────────────────────────────────────────────────
 
@@ -164,7 +178,7 @@ async function checkTaste(): Promise<Outcome> {
     avoids: "소독약 냄새",
   });
 
-  if (result.generatedBy !== "ai") return no("AI 응답이 아니라 폴백이에요", FALLBACK_HINT);
+  if (result.generatedBy !== "ai") return no("AI 응답이 아니라 폴백이에요", fallbackHint("taste"));
   if (!result.summary.trim()) return no("분석 요약이 비었어요", "summary 필드를 확인해주세요.");
 
   if (result.profile.peat > -1) {
@@ -183,7 +197,7 @@ async function checkQuiz(): Promise<Outcome> {
     answers: { experience: "beginner", budget: "mid" },
     candidates: rankWhiskies(PROFILE, {}, 8),
   });
-  if (payload.generatedBy !== "ai") return no(`AI 응답이 아니라 폴백이에요`, FALLBACK_HINT);
+  if (payload.generatedBy !== "ai") return no("AI 응답이 아니라 폴백이에요", fallbackHint("recommend"));
   if (payload.picks.length !== 3) {
     return no(
       `추천이 3병이 아니라 ${payload.picks.length}병이에요`,
@@ -210,7 +224,7 @@ async function checkJournal(): Promise<Outcome> {
     history: [],
     candidates: rankWhiskies(PROFILE, { excludeIds: [whisky.id] }, 8),
   });
-  if (result.payload.generatedBy !== "ai") return no("AI 응답이 아니라 폴백이에요", FALLBACK_HINT);
+  if (result.payload.generatedBy !== "ai") return no("AI 응답이 아니라 폴백이에요", fallbackHint("journal"));
   if (!result.payload.basedOn) {
     return no("취향 분석(basedOn)이 비었어요", "후기에서 취향 축 변화를 못 뽑았어요. 프롬프트를 확인해주세요.");
   }
@@ -225,7 +239,7 @@ async function checkScan(): Promise<Outcome> {
   if (result.generatedBy !== "ai") {
     return no(
       "AI 응답이 아니라 폴백이에요",
-      `${FALLBACK_HINT} 비전(이미지 입력)을 지원하지 않는 모델이면 여기서만 실패해요.`,
+      `${fallbackHint("scan")} 비전(이미지 입력)을 지원하지 않는 모델이면 여기서만 실패해요.`,
     );
   }
   // 좌표 박스가 오면 화면에 그릴 수 있는 값인지 봐요 (뒤집히거나 범위를 벗어나면 못 그려요)
@@ -295,7 +309,7 @@ async function checkPrice(): Promise<Outcome> {
     profile: PROFILE,
     candidates: rankWhiskies(PROFILE, { excludeIds: [whisky.id] }, 6),
   });
-  if (result.generatedBy !== "ai") return no("AI 응답이 아니라 폴백이에요", FALLBACK_HINT);
+  if (result.generatedBy !== "ai") return no("AI 응답이 아니라 폴백이에요", fallbackHint("price"));
   const unknown = result.alternatives.find((a) => !WHISKIES.some((w) => w.id === a.whiskyId));
   if (unknown) return no(`사전에 없는 id 가 왔어요 (${unknown.whiskyId})`, "대안 후보를 코드에서 걸러야 해요.");
   return ok(`${STANCE_LABELS[result.stance]} · "${result.headline}" · 대안 ${result.alternatives.length}개`);
@@ -331,7 +345,13 @@ function hintForError(error: unknown): string {
     if (error.kind === "auth") {
       return "키가 거절당했어요. Vercel 환경변수의 키 값과 (Gemini 면) GEMINI_MODEL 이름을 확인해주세요.";
     }
-    if (error.kind === "rate_limit") return "요청 한도에 걸렸어요. 잠시 뒤 다시 눌러주세요.";
+    if (error.kind === "rate_limit") {
+      // 분당인지 하루인지는 프로바이더가 오류 메시지 괄호 안에 넣어줘요 (gemini.ts)
+      return (
+        /\(([^)]+)\)/.exec(error.message)?.[1] ??
+        "요청 한도에 걸렸어요. 잠시 뒤 다시 눌러주세요."
+      );
+    }
     if (error.kind === "refusal") return "모델이 응답을 거부했어요. 프롬프트를 확인해주세요.";
   }
   const message = error instanceof Error ? error.message : String(error);

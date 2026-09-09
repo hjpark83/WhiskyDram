@@ -67,6 +67,18 @@ function quotaScope(raw: string): QuotaScope {
   return null;
 }
 
+/**
+ * 429 응답 **본문 하나로** 안내 문구까지.
+ *
+ * 검색 그라운딩(`web-research.ts`)은 자기 fetch 를 따로 써서 아래 `callGemini`
+ * 를 안 거쳐요. 그래서 한도 안내를 여기 모아두고 양쪽이 같이 써요 — 안 그러면
+ * 자기점검에서 **다섯 줄은 "하루 한도" 라고 하는데 팝업 한 줄만 "잠시 뒤 다시"**
+ * 라고 하는 일이 생겨요 (실제로 그랬어요).
+ */
+export function quotaHintFromBody(raw: string): string {
+  return quotaHint(quotaScope(raw), retryDelayMs(raw));
+}
+
 /** 429 안내 문구 — 기다리면 될 일인지, 결제를 붙여야 할 일인지 딱 말해줘요 */
 export function quotaHint(scope: QuotaScope, retryAfterMs: number | null): string {
   if (scope === "day") {

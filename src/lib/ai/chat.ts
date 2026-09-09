@@ -1,7 +1,6 @@
 import {
   activeProvider,
   streamTurn,
-  toAiError,
   userMessageFor,
   type AiToolDef,
   type AiToolResult,
@@ -20,6 +19,7 @@ import {
   TYPE_SHORT_KO,
 } from "@/lib/whisky/format";
 import { hasProfile, matchPercent } from "@/lib/whisky/recommend";
+import { noteAiFailure } from "@/lib/ai/failure-log";
 import {
   STYLE_TAGS,
   type Origin,
@@ -329,8 +329,7 @@ export async function* runChat(turns: ChatTurn[], ctx: ChatContext): AsyncGenera
     }
     yield { type: "done" };
   } catch (error) {
-    const err = toAiError(error);
-    console.error(`[ai/chat] ${provider.id} 실패 (${err.kind}): ${err.message}`);
-    yield { type: "error", message: userMessageFor(err.kind) };
+    const failure = noteAiFailure("chat", provider.id, error);
+    yield { type: "error", message: userMessageFor(failure.kind) };
   }
 }
