@@ -61,6 +61,17 @@ export default async function AdminPopupsPage() {
                         예시
                       </Badge>
                     )}
+                    {/* 재확인이 찾아낸 것. 놓치면 정리해둔 정보가 낡아요 */}
+                    {p.pendingRecheck && p.pendingRecheck.changes.length > 0 && (
+                      <Badge className="bg-amber-500/20 text-amber-200">
+                        변경 제안 {p.pendingRecheck.changes.length}
+                      </Badge>
+                    )}
+                    {p.pendingRecheck?.notFound && (
+                      <Badge variant="outline" className="border-destructive/60 text-destructive">
+                        웹에서 못 찾음
+                      </Badge>
+                    )}
                   </div>
                   <p className="mt-1.5 truncate font-medium text-amber-50">{p.title}</p>
                   <p className="truncate text-xs text-muted-foreground">

@@ -61,7 +61,9 @@ export default async function PopupDetailPage({ params }: PageProps<"/popup/[id]
   const whiskies = popup.whiskyIds.map((wid) => getWhisky(wid)).filter((w): w is NonNullable<typeof w> => Boolean(w));
   // 근거가 있으면 "네이버에서 찾아보세요" 검색 링크를 만들지 않아요 (resolveLinks 주석 참고)
   const links = resolveLinks(popup, { hasSources: popup.sources.length > 0 });
-  const checked = checkedAtText(popup.updatedAt);
+  // "언제 확인한 정보" 는 재확인 시각이 정답이에요. updatedAt 은 색만 바꿔도
+  // 갱신돼서 실제보다 최신처럼 보여요. 재확인을 아직 안 돌린 팝업만 updatedAt 로.
+  const checked = checkedAtText(popup.lastCheckedAt ?? popup.updatedAt);
   const booking = reservationLink(popup);
   const status = popupStatus(popup);
 
