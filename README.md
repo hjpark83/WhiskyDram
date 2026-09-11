@@ -52,10 +52,13 @@ npm run dev
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
 | `NEXT_PUBLIC_SITE_URL` | 인증 리다이렉트용 사이트 URL |
-| `AI_PROVIDER` | (선택) `anthropic` / `openai` / `gemini` 중 강제 지정 |
+| `AI_PROVIDER` | (선택) `anthropic` / `openai` / `gemini` 중 **먼저 쓸** 것. 안 정하면 ChatGPT → Claude → Gemini 순으로 키가 있는 걸 골라요 |
 | `ANTHROPIC_API_KEY` · `ANTHROPIC_MODEL` | Claude 키 / 모델 (기본 `claude-opus-5`) |
 | `OPENAI_API_KEY` · `OPENAI_MODEL` | ChatGPT 키 / 모델 (기본 `gpt-5`) |
 | `GEMINI_API_KEY` · `GEMINI_MODEL` | Gemini 키 / 모델 (기본 `gemini-3.5-flash`) |
+
+기본은 **ChatGPT** 예요. Gemini 무료 등급은 하루 한도가 금방 차서 그날 AI 가 아예 안 도는 일이
+반복됐거든요. 결제를 붙인 프로바이더를 앞에 두고 Gemini 는 마지막 보루로 둬요.
 
 키가 하나도 없어도 앱은 돌아가요 — 모든 AI 기능에 규칙 기반 폴백이 있어서 데모가 멈추지 않아요.
 `/api/health` 를 열면 어떤 키가 잡혔고 지금 어떤 프로바이더가 쓰이는지 확인할 수 있어요.

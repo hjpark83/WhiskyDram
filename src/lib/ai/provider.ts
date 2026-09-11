@@ -57,7 +57,17 @@ const LABELS: Record<AiProviderId, string> = {
   gemini: "Gemini",
 };
 
-const ORDER: AiProviderId[] = ["anthropic", "openai", "gemini"];
+/**
+ * 기본 순서 — `AI_PROVIDER` 를 안 정했을 때 이 순서로 키가 있는 걸 골라요.
+ *
+ * **ChatGPT 가 먼저**예요. Gemini 무료 등급은 하루 한도가 금방 차서 그날
+ * AI 가 아예 안 도는 일이 반복됐어요. 그래서 결제를 붙인 프로바이더를 앞에
+ * 두고, Gemini 는 마지막 보루로 남겨요.
+ *
+ * 이건 "먼저 시도" 지 "이것만" 이 아니에요 — 앞이 막히면 `providerChain()` 이
+ * 뒤로 넘겨요.
+ */
+const ORDER: AiProviderId[] = ["openai", "anthropic", "gemini"];
 
 /** 지금 쓸 프로바이더. 키가 하나도 없으면 null. */
 export function activeProvider(): ProviderInfo | null {
