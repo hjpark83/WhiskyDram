@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { activeProvider, configuredProviders } from "@/lib/ai/provider";
 import { CHECKS } from "@/lib/ai/self-check";
 import { CheckView } from "./check-view";
+import { ProbeView } from "./probe-view";
 
 export const metadata: Metadata = { title: "AI 점검" };
 
@@ -78,6 +79,8 @@ export default async function AdminAiPage() {
           </p>
         </CardContent>
       </Card>
+
+      {active && <ProbeView />}
 
       <section className="space-y-3">
         <h2 className="text-lg text-amber-100">기능별 실제 호출 점검</h2>
