@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import { geminiBase, geminiKey, quotaHintFromBody } from "@/lib/ai/gemini";
-import { activeProvider, AiError, toAiError, type ProviderInfo } from "@/lib/ai/provider";
+import { AiError, providerChain, toAiError, type ProviderInfo } from "@/lib/ai/provider";
 
 /**
  * "AI 가 웹에서 찾아보기".
@@ -41,12 +41,36 @@ function pushSource(out: ResearchSource[], url: unknown, title: unknown): void {
   out.push({ url, title: typeof title === "string" && title ? title : url });
 }
 
+/**
+ * 웹 검색도 프로바이더를 넘겨가며 시도해요.
+ *
+ * 여기가 한도에 가장 잘 걸려요 — 한 번 누르면 그라운딩 + 구조화 추출로 두 번
+ * 부르고, 그라운딩 호출 자체가 무거워요. 그리고 무료 등급에서 **그라운딩만
+ * 따로 막혀 있는 경우**도 있어서, 다른 프로바이더의 검색 도구로 넘어갈 수 있으면
+ * 기능이 살아나요 (Claude 는 web_search, OpenAI 는 Responses API 의 web_search).
+ */
 export async function researchWeb(prompt: string): Promise<ResearchResult> {
-  const provider = activeProvider();
-  if (!provider) throw new AiError("AI 프로바이더가 설정되지 않았어요.", "auth");
-  if (provider.id === "gemini") return researchGemini(prompt, provider);
-  if (provider.id === "openai") return researchOpenAi(prompt, provider);
-  return researchAnthropic(prompt, provider);
+  const chain = providerChain();
+  if (chain.length === 0) throw new AiError("AI 프로바이더가 설정되지 않았어요.", "auth");
+
+  let firstError: unknown = null;
+  for (const [i, provider] of chain.entries()) {
+    try {
+      if (provider.id === "gemini") return await researchGemini(prompt, provider);
+      if (provider.id === "openai") return await researchOpenAi(prompt, provider);
+      return await researchAnthropic(prompt, provider);
+    } catch (error) {
+      firstError ??= error;
+      const kind = toAiError(error).kind;
+      // 한도·인증은 그 프로바이더만의 문제라 다른 곳에서는 될 수 있어요.
+      // 그라운딩 미지원(400)도 프로바이더를 바꾸면 되니 같이 넘겨요.
+      const status = toAiError(error).status;
+      const movable = kind === "rate_limit" || kind === "auth" || status === 400;
+      if (i === chain.length - 1 || !movable) throw firstError;
+      console.warn(`[ai/research] ${provider.id} 실패 (${kind}) → ${chain[i + 1].id} 로 넘어가요`);
+    }
+  }
+  throw firstError ?? new AiError("웹 검색에 실패했어요.", "other");
 }
 
 // ── Gemini: google_search 그라운딩 (네이티브 REST) ───────────────────────────
@@ -70,11 +94,12 @@ async function researchGemini(prompt: string, provider: ProviderInfo): Promise<R
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
     // 한도(429)면 분당인지 하루인지까지 — callGemini 와 같은 안내를 써요
-    const hint = res.status === 429 ? ` ${quotaHintFromBody(detail)}` : "";
+    const hint = res.status === 429 ? quotaHintFromBody(detail).trim().replace(/^\((.*)\)$/, "$1") : "";
     throw new AiError(
-      `Gemini 검색 실패:${hint} ${detail.slice(0, 300)}`,
+      `Gemini 검색 실패: ${hint} ${detail.slice(0, 300)}`,
       res.status === 429 ? "rate_limit" : "other",
       res.status,
+      hint || undefined,
     );
   }
 

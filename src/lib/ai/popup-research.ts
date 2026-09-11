@@ -214,11 +214,9 @@ export function researchErrorMessage(error: unknown): string {
   const err = toAiError(error);
   if (err.kind === "auth") return "AI 키 설정을 확인해주세요. 웹 검색은 키가 있어야 돼요.";
   if (err.kind === "rate_limit") {
-    // 괄호 안 안내만 뽑아서 보여줘요 (원문 JSON 은 화면에 쓸모가 없어요)
-    const hint = /\(([^)]+)\)/.exec(err.message)?.[1];
-    return hint
-      ? `AI 사용 한도에 걸렸어요. ${hint}`
-      : "AI 사용 한도에 걸렸어요. 30초쯤 뒤에 다시 눌러주세요.";
+    // 안내는 AiError.hint 에 그대로 들어 있어요 (message 를 파싱하지 않아요 —
+    // 안내문에 괄호가 있으면 잘렸어요)
+    return err.hint ?? "AI 사용 한도에 걸렸어요. 30초쯤 뒤에 다시 눌러주세요.";
   }
   return `검색에 실패했어요: ${err.message.slice(0, 200)}`;
 }

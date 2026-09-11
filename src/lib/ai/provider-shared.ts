@@ -22,12 +22,24 @@ export class AiError extends Error {
   // 점검 스크립트가 앱 코드를 그대로 불러올 수 있어요.
   readonly kind: AiErrorKind;
   readonly status?: number;
+  /**
+   * 사람에게 그대로 보여줄 안내 문구 (있으면).
+   *
+   * 예전엔 이 안내를 `message` 안에 괄호로 넣고, 화면에서 정규식으로 다시
+   * 뽑아 썼어요. **그게 깨졌어요** — 안내문 안에 괄호가 또 있으면
+   * `\(([^)]+)\)` 가 첫 닫는 괄호에서 끊겨서 문장이 잘렸어요
+   * ("…하루 한도예요(한국 시간 오후 4~5시쯤 초기화돼요" 까지만 나옴).
+   *
+   * 그래서 파싱하지 않고 **따로 들고 다녀요.**
+   */
+  readonly hint?: string;
 
-  constructor(message: string, kind: AiErrorKind, status?: number) {
+  constructor(message: string, kind: AiErrorKind, status?: number, hint?: string) {
     super(message);
     this.name = "AiError";
     this.kind = kind;
     this.status = status;
+    this.hint = hint;
   }
 }
 

@@ -75,6 +75,68 @@ export function configuredProviders(): ProviderInfo[] {
   return ORDER.filter((id) => keyFor(id)).map((id) => ({ id, label: LABELS[id], model: modelFor(id) }));
 }
 
+/**
+ * 시도할 순서. 첫 번째가 막히면 다음으로 넘어가요.
+ *
+ * ## 왜 넘어가야 하나
+ *
+ * 한 프로바이더가 한도에 걸리면 **모든 AI 기능이 동시에 규칙 기반 폴백으로**
+ * 떨어져요. 무료 등급은 하루 한도가 금방 차는데, 그러면 그날은 AI 가 하나도
+ * 안 돌아요. 키를 두 개 넣어둘 수 있는 구조인데 하나만 쓰고 앉아 있을 이유가
+ * 없어요.
+ *
+ * `AI_PROVIDER` 로 지정하면 **그걸 먼저** 쓰고, 막히면 나머지로 넘어가요.
+ * "지정했으니 그것만" 이 아니라 "지정한 걸 우선" 이에요 — 데모 중에 한도
+ * 때문에 기능이 죽는 것보다 다른 모델로라도 답이 나오는 게 나아요.
+ */
+export function providerChain(): ProviderInfo[] {
+  const wanted = env("AI_PROVIDER")?.toLowerCase();
+  const first = wanted && ORDER.includes(wanted as AiProviderId) ? (wanted as AiProviderId) : null;
+  const ids = first ? [first, ...ORDER.filter((id) => id !== first)] : ORDER;
+  return ids.filter((id) => keyFor(id)).map((id) => ({ id, label: LABELS[id], model: modelFor(id) }));
+}
+
+/**
+ * 다음 프로바이더로 넘어갈 만한 실패인지.
+ *
+ * 한도·인증은 **그 프로바이더만의 문제**라 다른 곳에서는 될 수 있어요.
+ * 반대로 거절(refusal)이나 스키마 불일치는 어디서 불러도 같은 결과라,
+ * 넘어가봤자 시간과 돈만 써요. 그래서 두 가지만 넘겨요.
+ */
+function shouldFailover(error: unknown): boolean {
+  const kind = toAiError(error).kind;
+  return kind === "rate_limit" || kind === "auth";
+}
+
+/**
+ * 체인을 돌며 처음 성공하는 프로바이더의 결과를 돌려줘요.
+ * 전부 실패하면 **첫 번째 오류**를 던져요 (사용자가 의도한 프로바이더의 이유가
+ * 가장 알고 싶은 정보예요 — 마지막 것은 곁가지예요).
+ */
+async function withFailover<T>(
+  run: (provider: ProviderInfo) => Promise<T>,
+  label: string,
+): Promise<T> {
+  const chain = providerChain();
+  if (chain.length === 0) throw new AiError("AI 프로바이더가 설정되지 않았어요.", "auth");
+
+  let firstError: unknown = null;
+  for (const [i, provider] of chain.entries()) {
+    try {
+      return await run(provider);
+    } catch (error) {
+      firstError ??= error;
+      const last = i === chain.length - 1;
+      if (last || !shouldFailover(error)) throw firstError;
+      const next = chain[i + 1];
+      console.warn(
+        `[ai/${label}] ${provider.id} 실패 (${toAiError(error).kind}) → ${next.id} 로 넘어가요`,
+      );
+    }
+  }
+  throw firstError ?? new AiError("AI 호출에 실패했어요.", "other");
+}
+
 // ── 클라이언트 ──────────────────────────────────────────────────────────────
 
 let anthropicClient: Anthropic | null = null;
@@ -127,21 +189,20 @@ function stripUnsupportedKeywords(node: unknown): unknown {
 }
 
 export async function generateJson<T>(req: JsonRequest<T>): Promise<JsonResponse<T>> {
-  const provider = activeProvider();
-  if (!provider) throw new AiError("AI 프로바이더가 설정되지 않았어요.", "auth");
+  return withFailover(async (provider) => {
+    if (provider.id === "anthropic") return generateJsonAnthropic(req, provider);
+    if (provider.id === "openai") return generateJsonOpenAi(req, provider);
 
-  if (provider.id === "anthropic") return generateJsonAnthropic(req, provider);
-  if (provider.id === "openai") return generateJsonOpenAi(req, provider);
-
-  const { data, model } = await geminiGenerateJson({
-    model: provider.model,
-    system: req.system,
-    user: req.user,
-    images: req.images,
-    schema: req.schema,
-    maxTokens: req.maxTokens,
-  });
-  return { data, model, provider: provider.id };
+    const { data, model } = await geminiGenerateJson({
+      model: provider.model,
+      system: req.system,
+      user: req.user,
+      images: req.images,
+      schema: req.schema,
+      maxTokens: req.maxTokens,
+    });
+    return { data, model, provider: provider.id };
+  }, "json");
 }
 
 async function generateJsonAnthropic<T>(req: JsonRequest<T>, provider: ProviderInfo): Promise<JsonResponse<T>> {
@@ -238,12 +299,11 @@ async function generateJsonOpenAi<T>(req: JsonRequest<T>, provider: ProviderInfo
  * 호출부가 결과를 붙여 다시 부르는 방식(툴 루프)이에요.
  */
 export async function streamTurn(req: StreamRequest): Promise<StreamResult> {
-  const provider = activeProvider();
-  if (!provider) throw new AiError("AI 프로바이더가 설정되지 않았어요.", "auth");
-
-  if (provider.id === "anthropic") return streamTurnAnthropic(req, provider);
-  if (provider.id === "openai") return streamTurnOpenAi(req, provider);
-  return geminiStreamTurn({ ...req, model: provider.model });
+  return withFailover(async (provider) => {
+    if (provider.id === "anthropic") return streamTurnAnthropic(req, provider);
+    if (provider.id === "openai") return streamTurnOpenAi(req, provider);
+    return geminiStreamTurn({ ...req, model: provider.model });
+  }, "stream");
 }
 
 function toAnthropicMessages(turns: AiTurn[]): Anthropic.MessageParam[] {

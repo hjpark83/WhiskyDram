@@ -346,11 +346,7 @@ function hintForError(error: unknown): string {
       return "키가 거절당했어요. Vercel 환경변수의 키 값과 (Gemini 면) GEMINI_MODEL 이름을 확인해주세요.";
     }
     if (error.kind === "rate_limit") {
-      // 분당인지 하루인지는 프로바이더가 오류 메시지 괄호 안에 넣어줘요 (gemini.ts)
-      return (
-        /\(([^)]+)\)/.exec(error.message)?.[1] ??
-        "요청 한도에 걸렸어요. 잠시 뒤 다시 눌러주세요."
-      );
+      return error.hint ?? "요청 한도에 걸렸어요. 잠시 뒤 다시 눌러주세요.";
     }
     if (error.kind === "refusal") return "모델이 응답을 거부했어요. 프롬프트를 확인해주세요.";
   }
