@@ -339,24 +339,36 @@ const RUNNERS: Record<CheckId, () => Promise<Outcome>> = {
   popup: checkPopup,
 };
 
+/** 어느 프로바이더의 모델 이름 변수를 봐야 하는지 */
+const MODEL_ENV: Record<string, string> = {
+  anthropic: "ANTHROPIC_MODEL",
+  openai: "OPENAI_MODEL",
+  gemini: "GEMINI_MODEL",
+};
+
 /** 오류를 사용자가 무엇을 고쳐야 하는지로 번역해요. */
 function hintForError(error: unknown): string {
+  const modelVar = MODEL_ENV[activeProvider()?.id ?? ""] ?? "…_MODEL";
+
   if (error instanceof AiError) {
     if (error.kind === "auth") {
-      return "키가 거절당했어요. Vercel 환경변수의 키 값과 (Gemini 면) GEMINI_MODEL 이름을 확인해주세요.";
+      return `키가 거절당했어요. Vercel 환경변수의 키 값과, 그 키가 이 모델을 쓸 수 있는지 확인해주세요 (${modelVar}).`;
     }
     if (error.kind === "rate_limit") {
-      // 분당인지 하루인지는 프로바이더가 오류 메시지 괄호 안에 넣어줘요 (gemini.ts)
-      return (
-        /\(([^)]+)\)/.exec(error.message)?.[1] ??
-        "요청 한도에 걸렸어요. 잠시 뒤 다시 눌러주세요."
-      );
+      return error.hint ?? "요청 한도에 걸렸어요. 잠시 뒤 다시 눌러주세요.";
     }
     if (error.kind === "refusal") return "모델이 응답을 거부했어요. 프롬프트를 확인해주세요.";
+    // 프로바이더를 바꾼 직후 가장 흔한 실패예요 — 키는 맞는데 모델 이름이 없는 것
+    if (error.status === 404) {
+      return `그런 모델이 없다는 응답이에요. ${modelVar} 값을 프로바이더 콘솔에 있는 이름으로 맞춰주세요 (지금 값: ${activeProvider()?.model ?? "?"}).`;
+    }
   }
   const message = error instanceof Error ? error.message : String(error);
+  if (/model|not found|does not exist|unknown model/i.test(message) && /404|not_found/i.test(message)) {
+    return `모델 이름이 안 맞는 것 같아요. ${modelVar} 를 확인해주세요 (지금 값: ${activeProvider()?.model ?? "?"}).`;
+  }
   if (/fetch failed|ENOTFOUND|ECONNREFUSED|timeout/i.test(message)) {
-    return "네트워크에서 프로바이더에 못 닿았어요. GEMINI_BASE_URL 을 잘못 남겨두지 않았는지 확인해주세요.";
+    return "네트워크에서 프로바이더에 못 닿았어요. GEMINI_BASE_URL·OPENAI_BASE_URL 같은 개발용 주소가 배포에 남아 있지 않은지 확인해주세요.";
   }
   return "위 메시지를 그대로 검색해보거나 서버 로그를 확인해주세요.";
 }

@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import { Info, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { activeProvider, configuredProviders } from "@/lib/ai/provider";
+import { activeProvider, providerChain } from "@/lib/ai/provider";
 import { CHECKS } from "@/lib/ai/self-check";
 import { CheckView } from "./check-view";
+import { ProbeView } from "./probe-view";
 
 export const metadata: Metadata = { title: "AI 점검" };
 
@@ -21,7 +22,7 @@ const ENV_ROWS: { name: string; note: string }[] = [
 
 export default async function AdminAiPage() {
   const active = activeProvider();
-  const configured = configuredProviders();
+  const chain = providerChain();
   const present = (name: string) => Boolean(process.env[name]?.trim());
   const baseUrl = process.env.GEMINI_BASE_URL?.trim();
 
@@ -34,16 +35,31 @@ export default async function AdminAiPage() {
             <h2 className="text-lg">지금 쓰는 AI</h2>
           </div>
           {active ? (
-            <p className="text-sm text-amber-50/85">
-              <strong className="font-semibold text-amber-100">{active.label}</strong> · 모델{" "}
-              <code className="text-amber-300">{active.model}</code>
-              {configured.length > 1 && (
-                <span className="text-muted-foreground">
-                  {" "}
-                  (키가 있는 것: {configured.map((p) => p.label).join(", ")})
-                </span>
+            <>
+              <p className="text-sm text-amber-50/85">
+                <strong className="font-semibold text-amber-100">{active.label}</strong> · 모델{" "}
+                <code className="text-amber-300">{active.model}</code>
+              </p>
+              {chain.length > 1 ? (
+                /* 전환 순서를 보여줘요. "왜 Gemini 라고 했는데 Claude 가 답했지?" 를
+                   화면에서 바로 알 수 있어야 해요. */
+                <p className="text-sm text-amber-50/85">
+                  한도에 걸리면{" "}
+                  <strong className="font-semibold text-amber-100">순서대로 넘어가요</strong>:{" "}
+                  {chain.map((p, i) => (
+                    <span key={p.id}>
+                      {i > 0 && <span className="text-muted-foreground"> → </span>}
+                      <code className="text-amber-300">{p.label}</code>
+                    </span>
+                  ))}
+                </p>
+              ) : (
+                <p className="text-sm text-amber-100/70">
+                  키가 하나뿐이라 이 프로바이더가 막히면 규칙 기반 결과로 떨어져요. 다른 프로바이더
+                  키를 하나 더 넣어두면 한도에 걸려도 AI 응답이 계속 나와요.
+                </p>
               )}
-            </p>
+            </>
           ) : (
             <p className="text-sm text-red-200">
               키가 하나도 없어요. 지금은 모든 AI 기능이 규칙 기반 결과로 돌아가요 (데모는 멈추지 않지만
@@ -78,6 +94,8 @@ export default async function AdminAiPage() {
           </p>
         </CardContent>
       </Card>
+
+      {active && <ProbeView />}
 
       <section className="space-y-3">
         <h2 className="text-lg text-amber-100">기능별 실제 호출 점검</h2>

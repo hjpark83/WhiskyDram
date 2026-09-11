@@ -35,6 +35,8 @@ export interface AiFailure {
   where: string;
   kind: AiErrorKind;
   message: string;
+  /** 프로바이더가 준 사람용 안내 (있으면) */
+  hint?: string;
   at: number;
 }
 
@@ -51,6 +53,7 @@ export function noteAiFailure(where: string, providerId: string, error: unknown)
     kind: err.kind,
     // 원문이 길면(429 본문 등) 앞부분만 — 화면에 한 줄로 보여줄 거라
     message: err.message.slice(0, 300),
+    hint: err.hint,
     at: Date.now(),
   };
   last = failure;
@@ -68,11 +71,8 @@ export function recentFailure(where: string, withinMs = 120_000): AiFailure | nu
 export function failureHint(failure: AiFailure | null): string | null {
   if (!failure) return null;
   if (failure.kind === "rate_limit") {
-    // gemini.ts 가 괄호 안에 분당/하루와 대기 시간을 넣어줘요
-    const detail = /\(([^)]+)\)/.exec(failure.message)?.[1];
-    // detail 자체가 이미 완성된 안내라 앞에 말을 더 붙이지 않아요
-    // ("한도에 걸렸어요 — 오늘 무료 한도를 다 썼어요 — …" 처럼 대시가 겹쳐요)
-    return detail ?? "AI 사용 한도에 걸렸어요 (429). 잠시 뒤 다시 눌러주세요.";
+    // 안내는 AiError.hint 로 구조화해서 들고 와요 (message 파싱은 괄호에서 잘렸어요)
+    return failure.hint ?? "AI 사용 한도에 걸렸어요 (429). 잠시 뒤 다시 눌러주세요.";
   }
   if (failure.kind === "auth") {
     return "키가 거부됐어요 (401/403). 키 값과, 그 키가 이 모델을 쓸 수 있는지 확인해주세요.";

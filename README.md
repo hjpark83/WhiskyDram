@@ -52,10 +52,13 @@ npm run dev
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
 | `NEXT_PUBLIC_SITE_URL` | 인증 리다이렉트용 사이트 URL |
-| `AI_PROVIDER` | (선택) `anthropic` / `openai` / `gemini` 중 강제 지정 |
+| `AI_PROVIDER` | (선택) `anthropic` / `openai` / `gemini` 중 **먼저 쓸** 것. 안 정하면 ChatGPT → Claude → Gemini 순으로 키가 있는 걸 골라요 |
 | `ANTHROPIC_API_KEY` · `ANTHROPIC_MODEL` | Claude 키 / 모델 (기본 `claude-opus-5`) |
 | `OPENAI_API_KEY` · `OPENAI_MODEL` | ChatGPT 키 / 모델 (기본 `gpt-5`) |
 | `GEMINI_API_KEY` · `GEMINI_MODEL` | Gemini 키 / 모델 (기본 `gemini-3.5-flash`) |
+
+기본은 **ChatGPT** 예요. Gemini 무료 등급은 하루 한도가 금방 차서 그날 AI 가 아예 안 도는 일이
+반복됐거든요. 결제를 붙인 프로바이더를 앞에 두고 Gemini 는 마지막 보루로 둬요.
 
 키가 하나도 없어도 앱은 돌아가요 — 모든 AI 기능에 규칙 기반 폴백이 있어서 데모가 멈추지 않아요.
 `/api/health` 를 열면 어떤 키가 잡혔고 지금 어떤 프로바이더가 쓰이는지 확인할 수 있어요.
@@ -77,6 +80,15 @@ AI 기능은 전부 두 가지 호출로 정리돼 있어요 (`src/lib/ai/provid
 
 바꾸는 방법은 키를 넣고 `AI_PROVIDER` 를 지정하는 것뿐이고, 기능 코드는 손대지 않아요.
 스키마 모드를 못 받는 모델이면 JSON 모드로 자동 재시도해요.
+
+**키를 두 개 넣으면 자동으로 넘어가요.** 한 프로바이더가 한도(429)·인증(401/403)으로 막히면
+다음 프로바이더로 같은 호출을 다시 해요 (`providerChain()` in `src/lib/ai/provider.ts`).
+`AI_PROVIDER` 는 "그것만" 이 아니라 **"그걸 먼저"** 라는 뜻이에요 — 무료 등급은 하루 한도가
+금방 차는데, 그때 모든 AI 기능이 동시에 규칙 기반으로 떨어지는 게 제일 아프거든요.
+
+거절(refusal)이나 스키마 불일치는 어디서 불러도 같은 결과라 넘기지 않아요 (시간·요금만 써요).
+전환이 일어나면 서버 로그에 `[ai/json] gemini 실패 (rate_limit) → openai 로 넘어가요` 가 남고,
+`/admin/ai` 화면에도 전환 순서가 보여요.
 
 웹 검색(`researchWeb`)은 프로바이더의 **검색 그라운딩**을 써요 — Gemini `google_search`(네이티브),
 OpenAI Responses API `web_search`, Claude `web_search` 서버 도구. 캐치테이블·네이버 HTML 을

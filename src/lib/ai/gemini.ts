@@ -170,7 +170,9 @@ async function callGemini(
           : res.status === 429
             ? quotaHint(scope, retryAfter)
             : "";
-    throw new AiError(`Gemini ${res.status}${hint}: ${detail}`, kind, res.status);
+    // hint 는 message 에도 넣고(로그용) 따로도 넘겨요(화면용). 화면에서 괄호를
+    // 다시 파싱하다 문장이 잘리는 일이 있어서 구조화된 값을 같이 들고 다녀요.
+    throw new AiError(`Gemini ${res.status}${hint}: ${detail}`, kind, res.status, hint.trim() ? hint.trim().replace(/^\((.*)\)$/, "$1") : undefined);
   }
   return res;
 }
