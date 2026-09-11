@@ -53,17 +53,29 @@ function retryDelayMs(raw: string): number | null {
 /**
  * 429 가 **분당** 한도인지 **하루** 한도인지.
  *
- * 둘은 대응이 완전히 달라요 — 분당이면 30초 뒤에 되고, 하루면 내일까지 안 돼요.
- * 그런데 둘 다 그냥 "요청이 많아요" 로만 말하면, 기다리면 될 일인지 결제를 붙여야
- * 할 일인지 알 수가 없어요. 구글이 `quotaId` 에 적어주는 걸 그대로 읽어요
- * (예: `GenerateRequestsPerMinutePerProjectPerModel-FreeTier`).
+ * 둘은 대응이 완전히 달라요 — 분당이면 30초 뒤에 되고, 하루면 한국 시간 오후
+ * 4~5시(태평양 자정)까지 안 돼요. 그냥 "요청이 많아요" 로만 말하면 기다리면 될
+ * 일인지 결제를 붙여야 할 일인지 알 수가 없어요.
+ *
+ * ## 모르면 모른다고 해야 해요
+ *
+ * 처음엔 `quotaId` 만 보고, **못 찾으면 "분당" 으로 단정**했어요. 그게 나빴어요 —
+ * 구글이 quota 정보 없이 429 만 주는 경우가 있는데, 그때 하루 한도인데도 "30초 뒤에
+ * 다시" 라고 말해서 **한참 기다린 사람이 계속 같은 말을 듣게** 됐어요. 틀린 확신이
+ * "모르겠다" 보다 나빠요.
+ *
+ * 그래서 (1) 이름이 `quotaId` 든 `quotaMetric` 이든 메시지 본문이든 **어디서든**
+ * per-day / per-minute 를 찾고, (2) 그래도 못 찾으면 `null` 을 돌려서 화면이
+ * 양쪽 가능성을 다 말하게 해요.
  */
 export type QuotaScope = "minute" | "day" | null;
 
 function quotaScope(raw: string): QuotaScope {
-  const id = /"quotaId"\s*:\s*"([^"]+)"/.exec(raw)?.[1] ?? "";
-  if (/PerDay/i.test(id)) return "day";
-  if (/PerMinute/i.test(id)) return "minute";
+  // quotaId·quotaMetric·message 어디에 들어와도 잡아요. 그라운딩(google_search)은
+  // 일반 호출과 다른 이름으로 오는 경우가 있어서 특정 키에 묶지 않아요.
+  //   PerDayPerProjectPerModel · generate_content_free_tier_requests_per_day · "per day"
+  if (/per[\s_-]*day/i.test(raw)) return "day";
+  if (/per[\s_-]*minute/i.test(raw)) return "minute";
   return null;
 }
 
@@ -79,13 +91,24 @@ export function quotaHintFromBody(raw: string): string {
   return quotaHint(quotaScope(raw), retryDelayMs(raw));
 }
 
+/** 하루 한도가 풀리는 때 — 태평양 자정 기준이라 한국은 오후 4~5시예요 */
+const DAY_RESET_KO = "한국 시간 오후 4~5시쯤 초기화돼요";
+
+/** 지금 사용량을 볼 수 있는 곳 (구글이 429 본문에서도 알려주는 주소) */
+const USAGE_URL = "https://ai.dev/rate-limit";
+
 /** 429 안내 문구 — 기다리면 될 일인지, 결제를 붙여야 할 일인지 딱 말해줘요 */
 export function quotaHint(scope: QuotaScope, retryAfterMs: number | null): string {
   if (scope === "day") {
-    return " (오늘 쓸 수 있는 무료 한도를 다 썼어요 — 한국 시간 오후 4~5시쯤 초기화돼요. 지금 꼭 써야 하면 Google AI Studio 에서 결제를 연결하거나, 다른 프로바이더 키를 넣어주세요)";
+    return ` (오늘 쓸 수 있는 무료 한도를 다 썼어요 — ${DAY_RESET_KO}. 지금 꼭 써야 하면 Google AI Studio 에서 결제를 연결하거나, 다른 프로바이더 키를 넣어주세요)`;
   }
-  const sec = retryAfterMs ? Math.ceil(retryAfterMs / 1000) : null;
-  return ` (분당 한도예요 — ${sec ? `${sec}초` : "30초"}쯤 뒤에 다시 눌러주세요)`;
+  if (scope === "minute") {
+    const sec = retryAfterMs ? Math.ceil(retryAfterMs / 1000) : 30;
+    return ` (분당 한도예요 — ${sec}초쯤 뒤에 다시 눌러주세요)`;
+  }
+  // 구글이 분당인지 하루인지 안 알려줬어요. **단정하지 않아요** — 하루 한도를
+  // "30초 뒤에 되세요" 라고 하면 한참 기다린 사람이 또 같은 말을 듣게 돼요.
+  return ` (한도를 넘었어요. 구글이 분당인지 하루인지는 안 알려줬어요 — 1분 뒤에 한 번 더 해보고 그래도 같으면 하루 한도예요(${DAY_RESET_KO}). 지금 사용량은 ${USAGE_URL} 에서 볼 수 있어요)`;
 }
 
 export function asRecord(value: unknown): Record<string, unknown> | null {

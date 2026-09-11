@@ -1,3 +1,4 @@
+import { ExternalLink } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -6,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MatchBadge } from "@/components/whisky/whisky-card";
 import { LiquidSwatch } from "@/components/whisky/liquid-swatch";
+import { photoSearchUrl } from "@/lib/whisky/photo-search";
 import { getWhisky, WHISKIES } from "@/data/whiskies";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -96,6 +98,17 @@ function Comparison({ a, b, profile }: { a: Whisky; b: Whisky; profile: TastePro
                       </Link>
                     </h2>
                     <p className="text-xs text-muted-foreground">{w.name}</p>
+                    {/* 두 병을 나란히 볼 때 실물이 제일 궁금해요. 사진을 직접 못 싣는
+                        대신 검색으로 보내요 (src/lib/whisky/photo-search.ts) */}
+                    <a
+                      href={photoSearchUrl(w)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground transition-colors hover:text-amber-300"
+                    >
+                      실물 사진 보기
+                      <ExternalLink className="size-2.5" aria-hidden />
+                    </a>
                   </div>
                 </div>
                 <MatchBadge percent={i === 0 ? pa : pb} />
